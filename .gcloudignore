@@ -1,0 +1,6 @@
+# What `gcloud run deploy --source .` uploads to Cloud Build: everything git keeps, minus these.
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+.env.deploy

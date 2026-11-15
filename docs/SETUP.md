@@ -99,6 +99,11 @@ Use a separate demo account, not a personal inbox.
 
 ## 5. Deploy
 
+**Shortcut:** `scripts/deploy.sh` runs sections 4 to 6 in one go and is safe to rerun. Copy
+`.env.deploy.example` to `.env.deploy` (git-ignored), fill it in, sign in with
+`gcloud auth login` and `npx firebase-tools login`, then run `bash scripts/deploy.sh`. The
+manual steps below are what it does.
+
 The app refuses to start in production without `APP_URL` (links in emails and the Secure
 cookie depend on it). Cloud Run's URL is predictable, so set it on the first deploy:
 
