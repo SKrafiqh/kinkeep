@@ -23,6 +23,15 @@ export const MAX_SEND_ATTEMPTS = 3;
 export const TICK_BUDGET_MS = 40_000;
 export const TICK_PAGE_SIZE = 200;
 
+/** Size limits per circle, so nobody can fill the database or starve the reminder engine. */
+export const MAX_MEDICINES = 40;
+export const MAX_APPOINTMENTS = 200;
+export const MAX_MEMBERS = 20;
+
+/** Daily caps, counted in the database so they hold across instances. */
+export const TEST_EMAIL_CIRCLE_CAP = 5;
+export const TEST_EMAIL_GLOBAL_CAP = 150;
+export const DEMO_GLOBAL_CAP = 200;
 export const AI_DAILY_CAP = 20;
 export const AI_TIMEOUT_MS = 20_000;
 export const BRIEF_DEFAULT_DAYS = 30;

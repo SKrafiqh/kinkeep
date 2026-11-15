@@ -1,6 +1,6 @@
 import { adherenceByMedicine, adherenceOf, missedPatterns } from '@/domain/adherence';
 import { briefPeriodStart, fallbackBrief, type BriefFacts } from '@/domain/brief';
-import { formatDay, formatWhen, localDate } from '@/domain/time';
+import { formatDay, formatWhen } from '@/domain/time';
 import type { Appointment, BriefContent, Circle, VisitBrief } from '@/domain/types';
 import { AI_DAILY_CAP, BRIEF_DEFAULT_DAYS } from '@/lib/constants';
 import { errorFields, log } from '@/lib/logger';
@@ -10,6 +10,7 @@ import type { Deps } from '../deps';
 import { paths } from '../repos/paths';
 import { listActivity, listAppointments, listDoses } from '../repos/queries';
 import { appointmentWhen, getAppointment } from './appointments';
+import { takeDaily } from './quota';
 import type { MemberContext } from './sessions';
 
 const CHANGES_SCANNED = 100;
@@ -37,19 +38,7 @@ async function gatherFacts(deps: Deps, circle: Circle, appointment: Appointment,
   };
 }
 
-// One counter per circle per local day keeps a busy circle from draining the Gemini quota.
-function underDailyCap(deps: Deps, circle: Circle, now: number): Promise<boolean> {
-  const day = localDate(now, circle.timeZone);
-  return deps.store.transaction(async (tx) => {
-    const fresh = await tx.get<Circle>(paths.circle(circle.id));
-    const count = fresh && fresh.ai.day === day ? fresh.ai.count : 0;
-    if (count >= AI_DAILY_CAP) return false;
-    tx.update(paths.circle(circle.id), { ai: { day, count: count + 1 } });
-    return true;
-  });
-}
-
-// Gemini's reply is a draft: it must match the schema exactly or it is thrown away.
+// The model's reply is a draft: it must match the schema exactly or it is thrown away.
 async function askAi(deps: Deps, facts: BriefFacts): Promise<BriefContent | null> {
   if (!deps.ai) return null;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -70,12 +59,14 @@ async function saveBriefDoc(deps: Deps, circleId: string, appointmentId: string,
   return brief;
 }
 
-/** Builds the visit brief with Gemini, or from the same facts without it, and caches it on the appointment. */
+/** Builds the visit brief with the AI model, or from the same facts without it, and caches it on the appointment. */
 export async function generateBrief(deps: Deps, who: MemberContext, appointmentId: string): Promise<VisitBrief> {
   const now = deps.clock.now();
   const appointment = await getAppointment(deps, who.circle.id, appointmentId);
   const facts = await gatherFacts(deps, who.circle, appointment, now);
-  const fromAi = deps.ai && (await underDailyCap(deps, who.circle, now)) ? await askAi(deps, facts) : null;
+  // One counter per circle per day keeps a busy circle from draining the AI credits.
+  const underCap = deps.ai !== null && (await takeDaily(deps, paths.quota(who.circle.id, 'ai'), AI_DAILY_CAP));
+  const fromAi = underCap ? await askAi(deps, facts) : null;
   return saveBriefDoc(deps, who.circle.id, appointmentId, {
     content: fromAi ?? fallbackBrief(facts),
     generatedAt: now,

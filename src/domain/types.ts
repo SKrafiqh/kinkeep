@@ -22,7 +22,6 @@ export interface Circle {
   nextSummaryAt: number | null;
   /** Demo circles only: the shared passcode shown in the demo banner. */
   demoPasscode: string | null;
-  ai: { day: string; count: number };
 }
 
 export interface AlertSettings {

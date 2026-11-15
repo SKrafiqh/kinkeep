@@ -1,6 +1,6 @@
 import type { Circle, Member } from '@/domain/types';
 import { HOUR_MS, MATERIALISE_HOURS, MATERIALISE_REFILL_HOURS, TICK_BUDGET_MS, TICK_PAGE_SIZE } from '@/lib/constants';
-import { log } from '@/lib/logger';
+import { errorFields, log } from '@/lib/logger';
 import type { Deps } from '../deps';
 import { paths } from '../repos/paths';
 import { circlesDueSummary, dueAppointments, dueDoses, listMembers, medicationsToTopUp } from '../repos/queries';
@@ -55,29 +55,47 @@ export async function runTick(deps: Deps): Promise<TickResult> {
   const now = deps.clock.now();
   const outOfTime = (): boolean => deps.clock.now() - now > TICK_BUDGET_MS;
   const load = circleLoader(deps);
-  const result: TickResult = { materialised: 0, doseEmails: 0, appointmentEmails: 0, summaryEmails: 0, complete: true };
+  const inCircle = async (circleId: string, work: (context: CircleContext) => Promise<number>): Promise<number> => {
+    const context = await load(circleId);
+    return context ? work(context) : 0;
+  };
 
   const horizon = now + (MATERIALISE_HOURS - MATERIALISE_REFILL_HOURS) * HOUR_MS;
-  for (const { circleId, item } of await medicationsToTopUp(deps.store, horizon, TICK_PAGE_SIZE)) {
-    if (outOfTime()) return { ...result, complete: false };
-    const context = await load(circleId);
-    if (context) result.materialised += await materialiseMedication(deps, context.circle, item, now);
-  }
-  for (const { circleId, doseIds } of bySlot(await dueDoses(deps.store, now, TICK_PAGE_SIZE))) {
-    if (outOfTime()) return { ...result, complete: false };
-    const context = await load(circleId);
-    if (context) result.doseEmails += await processSlot(deps, context.circle, context.members, doseIds, now);
-  }
-  for (const { circleId, item } of await dueAppointments(deps.store, now, TICK_PAGE_SIZE)) {
-    if (outOfTime()) return { ...result, complete: false };
-    const context = await load(circleId);
-    if (context) result.appointmentEmails += await processAppointment(deps, context.circle, context.members, item.id, now);
-  }
-  for (const circle of await circlesDueSummary(deps.store, now, TICK_PAGE_SIZE)) {
-    if (outOfTime()) return { ...result, complete: false };
-    const context = await load(circle.id);
-    if (context) result.summaryEmails += await processWeeklySummary(deps, circle.id, context.members, now);
-  }
+  const steps = [
+    await eachDue('materialise', await medicationsToTopUp(deps.store, horizon, TICK_PAGE_SIZE), outOfTime, ({ circleId, item }) =>
+      inCircle(circleId, ({ circle }) => materialiseMedication(deps, circle, item, now)),
+    ),
+    await eachDue('doses', bySlot(await dueDoses(deps.store, now, TICK_PAGE_SIZE)), outOfTime, ({ circleId, doseIds }) =>
+      inCircle(circleId, ({ circle, members }) => processSlot(deps, circle, members, doseIds, now)),
+    ),
+    await eachDue('appointments', await dueAppointments(deps.store, now, TICK_PAGE_SIZE), outOfTime, ({ circleId, item }) =>
+      inCircle(circleId, ({ circle, members }) => processAppointment(deps, circle, members, item.id, now)),
+    ),
+    await eachDue('summaries', await circlesDueSummary(deps.store, now, TICK_PAGE_SIZE), outOfTime, (circle) =>
+      inCircle(circle.id, ({ members }) => processWeeklySummary(deps, circle.id, members, now)),
+    ),
+  ];
+  const [materialised, doseEmails, appointmentEmails, summaryEmails] = steps.map((step) => step.count);
+  const result: TickResult = { materialised, doseEmails, appointmentEmails, summaryEmails, complete: steps.every((step) => step.complete) };
   log.info('tick.done', { ...result });
   return result;
+}
+
+// One failing item is logged and skipped, so it can never stop the reminders behind it.
+async function eachDue<T>(
+  step: string,
+  items: T[],
+  outOfTime: () => boolean,
+  work: (item: T) => Promise<number>,
+): Promise<{ count: number; complete: boolean }> {
+  let count = 0;
+  for (const item of items) {
+    if (outOfTime()) return { count, complete: false };
+    try {
+      count += await work(item);
+    } catch (error) {
+      log.error('tick.item_failed', { step, ...errorFields(error) });
+    }
+  }
+  return { count, complete: true };
 }

@@ -13,6 +13,9 @@ export const paths = {
   activity: (circleId: string) => `circles/${circleId}/activity`,
   activityItem: (circleId: string, activityId: string) => `circles/${circleId}/activity/${activityId}`,
   usedToken: (jti: string) => `usedTokens/${jti}`,
+  /** Daily counters: one per circle and purpose, and one per purpose for the whole app. */
+  quota: (circleId: string, name: string) => `circles/${circleId}/quota/${name}`,
+  globalQuota: (name: string) => `quota/${name}`,
 } as const;
 
 /** Collection ids used in collection-group queries; each needs an index in firestore.indexes.json. */

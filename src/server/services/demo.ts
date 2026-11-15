@@ -1,13 +1,15 @@
 import { buildDoseEvent } from '@/domain/schedule';
 import { addDays, localDate, localTime, zonedToInstant } from '@/domain/time';
 import type { Activity, Appointment, Circle, DoseEvent, DoseStatus, Medication, Member } from '@/domain/types';
-import { DAY_MS, MINUTE_MS } from '@/lib/constants';
+import { DAY_MS, DEMO_GLOBAL_CAP, MINUTE_MS } from '@/lib/constants';
+import { AppError } from '@/lib/errors';
 import { randomPasscode } from '../auth/passcode';
 import type { Deps } from '../deps';
 import { materialiseMedication } from '../reminders/materialise';
 import { paths } from '../repos/paths';
 import { newId } from '../repos/store';
 import { ALERTS_OFF, ALERTS_ON, buildCircle, buildMember, newCircleCode } from './circles';
+import { takeDaily } from './quota';
 
 const HISTORY_DAYS = 30;
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -58,6 +60,7 @@ function buildMedicines(circle: Circle, soon: string, now: number, by: string): 
 
 // A believable month: evenings slip more than mornings, and the statin slips most.
 function pastStatus(med: Medication, time: string, daysAgo: number): DoseStatus {
+  if (daysAgo === 0) return 'taken';
   if (med.name === 'Atorvastatin' && daysAgo % 4 === 0) return 'missed';
   if (med.name === 'Metformin' && time === EVENING && daysAgo % 9 === 0) return 'missed';
   if (med.name === 'Metformin' && time === EVENING && daysAgo === 5) return 'skipped';
@@ -136,6 +139,10 @@ function buildActivity(circle: Circle, people: DemoPeople, medicines: Medication
  */
 export async function seedDemoCircle(deps: Deps, timeZone: string): Promise<{ circle: Circle; member: Member }> {
   const now = deps.clock.now();
+  // Each demo writes about 150 documents; this cap holds across instances, unlike the per-address limit.
+  if (!(await takeDaily(deps, paths.globalQuota('demo'), DEMO_GLOBAL_CAP))) {
+    throw new AppError('RATE_LIMITED', 'The demo has been used a lot today. Please create your own circle, or try again tomorrow.');
+  }
   const passcode = randomPasscode();
   const people = await buildPeople(deps, passcode);
   const circle = buildCircle({ elderName: 'Mr Rao', timeZone, code: await newCircleCode(deps), now, remindersTo: null, demoPasscode: passcode });

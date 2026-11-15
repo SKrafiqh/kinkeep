@@ -70,6 +70,16 @@ function assertSameOrigin(request: Request, config: Config): void {
   if (origin !== config.APP_URL && !sameHost) throw new AppError('FORBIDDEN', 'This request did not come from the app.');
 }
 
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+
+// One bucket per route and caller. Ids in the path are replaced, so every appointment's
+// brief shares one bucket and a caller cannot mint fresh buckets by varying the id.
+function limitKey(request: Request, params: Params): string {
+  const ids = Object.values(params);
+  const route = new URL(request.url).pathname.split('/').map((segment) => (ids.includes(segment) ? ':id' : segment)).join('/');
+  return `${request.method} ${route} ${clientIp(request)}`;
+}
+
 async function readBody<Body>(request: Request, schema: z.ZodType<Body>): Promise<Body> {
   const json: unknown = await request.json().catch(() => {
     throw new AppError('VALIDATION', 'The request was not valid JSON.');
@@ -83,12 +93,13 @@ function createRoute<Body>(options: RouteOptions<Body>, handle: (context: RouteC
       const deps = getDeps();
       const now = deps.clock.now();
       if (!options.skipOriginCheck) assertSameOrigin(request, deps.config);
-      const limitKey = `${request.method} ${new URL(request.url).pathname} ${clientIp(request)}`;
-      if (options.rateLimit && !allowRequest(limitKey, options.rateLimit, now)) {
+      const params = await context.params;
+      if (Object.values(params).some((value) => !ID_PATTERN.test(value))) throw new AppError('NOT_FOUND', 'We could not find that.');
+      if (options.rateLimit && !allowRequest(limitKey(request, params), options.rateLimit, now)) {
         throw new AppError('RATE_LIMITED', 'That was a lot of tries. Please wait a minute and try again.');
       }
       const body = options.body ? await readBody(request, options.body) : (undefined as Body);
-      const result = await handle({ deps, request, body, params: await context.params, now });
+      const result = await handle({ deps, request, body, params, now });
       return result instanceof Response ? result : ok(result);
     } catch (error) {
       return failure(error);

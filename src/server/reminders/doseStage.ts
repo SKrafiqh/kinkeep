@@ -55,9 +55,16 @@ async function sendAll(deps: Deps, messages: EmailMessage[]): Promise<{ sent: nu
   return { sent: results.filter((result) => result.status === 'fulfilled').length, error: failure?.reason };
 }
 
+// A short code only: a mail server's own message can contain a member's email address.
+function errorCode(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === 'string') return code;
+  return error instanceof Error ? error.name : 'UNKNOWN';
+}
+
 // Retried only when nothing went out, so nobody ever gets the same stage twice.
 function recordFailure(deps: Deps, circle: Circle, claimed: Claimed[], error: unknown, now: number): Promise<void> {
-  const lastError = String(error instanceof Error ? error.message : error).slice(0, 200);
+  const lastError = errorCode(error);
   return deps.store.transaction(async (tx) => {
     const fresh = await Promise.all(claimed.map(({ event }) => tx.get<DoseEvent>(paths.dose(circle.id, event.id))));
     fresh.forEach((current, index) => {
@@ -84,9 +91,15 @@ export async function processSlot(deps: Deps, circle: Circle, members: Member[],
     }
     const result = await sendAll(deps, messages);
     sent += result.sent;
-    if (result.error === undefined) continue;
-    log.warn('tick.send_failed', { circleId: circle.id, stage, sent: result.sent, ...errorFields(result.error) });
+    if (result.error !== undefined) log.warn('tick.send_failed', { circleId: circle.id, stage, sent: result.sent, ...errorFields(result.error) });
     if (result.sent === 0) await recordFailure(deps, circle, group, result.error, now);
+    else await clearFailures(deps, circle, group);
   }
   return sent;
+}
+
+// The three-attempt limit is per stage: once a stage is sent, the next one starts from zero.
+async function clearFailures(deps: Deps, circle: Circle, claimed: Claimed[]): Promise<void> {
+  const failedBefore = claimed.filter(({ event }) => event.attempts > 0);
+  await Promise.all(failedBefore.map(({ event }) => deps.store.update(paths.dose(circle.id, event.id), { attempts: 0, lastError: null })));
 }

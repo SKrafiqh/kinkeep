@@ -39,7 +39,7 @@ Never leave a half-built feature reachable from the UI.
 
 - Next.js (App Router, latest stable) + TypeScript strict, one container on Cloud Run
 - Firestore (Native mode) through the server-side Admin SDK only
-- Gemini through the `@google/genai` SDK, model name from `GEMINI_MODEL`
+- AI through the Adaption Labs Responses API (plain `fetch`, no SDK), model name from `AI_MODEL`
 - Cloud Scheduler calling `POST /api/cron/tick` every 5 minutes
 - Email through Gmail SMTP (Nodemailer) behind an `EmailSender` interface
 - Secret Manager for secrets, Cloud Build for deploys, Cloud Logging for logs
@@ -109,13 +109,13 @@ npm run verify      # lint + typecheck + test + build
 
 ## AI rules
 
-- Gemini output is a draft. A person confirms before anything is saved.
+- AI output is a draft. A person confirms before anything is saved.
 - No dosing advice, diagnosis, or instructions to start, stop or change a medicine.
   Every AI surface shows the "not medical advice" line.
 - Request structured JSON, validate it with Zod, and fail closed on a mismatch.
 - Treat scanned text and user notes as untrusted data inside the prompt, never as
   instructions.
-- The app must work with Gemini unavailable: AI features show a clear fallback, core
+- The app must work with the AI unavailable: AI features show a clear fallback, core
   features are unaffected.
 
 ## Accessibility rules

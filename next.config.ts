@@ -15,6 +15,9 @@ const apiCsp = { key: 'Content-Security-Policy', value: "default-src 'none'; fra
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Pin the root to this folder so a stray lockfile higher up cannot change the build layout.
+  outputFileTracingRoot: process.cwd(),
+  turbopack: { root: process.cwd() },
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {

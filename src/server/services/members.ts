@@ -1,4 +1,5 @@
 import type { AlertSettings, Circle, Member } from '@/domain/types';
+import { MAX_MEMBERS } from '@/lib/constants';
 import { AppError, notFound } from '@/lib/errors';
 import type { AddMemberInput, UpdateMemberInput } from '@/lib/schemas';
 import { randomPasscode } from '../auth/passcode';
@@ -38,6 +39,9 @@ async function assertNameFree(deps: Deps, circleId: string, name: string, except
 /** Adds a helper with a one-time setup passcode, returned once for the elder to pass on. */
 export async function addMember(deps: Deps, who: MemberContext, input: AddMemberInput): Promise<{ member: MemberView; setupPasscode: string }> {
   await assertNameFree(deps, who.circle.id, input.name);
+  if ((await listMembers(deps.store, who.circle.id)).length >= MAX_MEMBERS) {
+    throw new AppError('CONFLICT', `A circle can have ${MAX_MEMBERS} members. Remove someone before adding another.`);
+  }
   const setupPasscode = randomPasscode();
   const member = await buildMember(deps, { ...input, passcode: setupPasscode, mustChangePasscode: true, alerts: ALERTS_OFF });
   await deps.store.set(paths.member(who.circle.id, member.id), member);

@@ -39,20 +39,20 @@ function applyQuery(found: Found<Doc>[], query: Query = {}): Found<Doc>[] {
 
 /** In-memory DocStore with Firestore's semantics, for tests and for running without a database. */
 export function createMemoryStore(): DocStore {
-  const docs = new Map<string, Doc>();
+  let docs = new Map<string, Doc>();
   let queue: Promise<unknown> = Promise.resolve();
 
   const read = <T>(path: string): T | null => {
     const doc = docs.get(path);
     return doc === undefined ? null : (structuredClone(doc) as T);
   };
-  const write = (path: string, data: object): void => {
-    docs.set(path, structuredClone(data) as Doc);
+  const write = (path: string, data: object, target = docs): void => {
+    target.set(path, structuredClone(data) as Doc);
   };
-  const patch = (path: string, changes: object): void => {
-    const current = docs.get(path);
+  const patch = (path: string, changes: object, target = docs): void => {
+    const current = target.get(path);
     if (current === undefined) throw new Error(`No document at ${path}`);
-    docs.set(path, { ...current, ...(structuredClone(changes) as Doc) });
+    target.set(path, { ...current, ...(structuredClone(changes) as Doc) });
   };
   const all = (): Found<Doc>[] => [...docs.entries()].map(([path, data]) => ({ path, data: structuredClone(data) }));
 
@@ -81,14 +81,18 @@ export function createMemoryStore(): DocStore {
     // Transactions run one at a time, which gives the same isolation Firestore promises.
     transaction: <T>(run: (tx: Transaction) => Promise<T>) => {
       const result = queue.then(async () => {
-        const writes: Array<() => void> = [];
+        const writes: Array<(draft: Map<string, Doc>) => void> = [];
         const value = await run({
           get: async (path) => read(path),
-          set: (path, data) => writes.push(() => write(path, data)),
-          update: (path, changes) => writes.push(() => patch(path, changes)),
-          delete: (path) => writes.push(() => docs.delete(path)),
+          set: (path, data) => writes.push((draft) => write(path, data, draft)),
+          update: (path, changes) => writes.push((draft) => patch(path, changes, draft)),
+          delete: (path) => writes.push((draft) => draft.delete(path)),
         });
-        writes.forEach((apply) => apply());
+        // All or nothing, like Firestore: the writes land on a copy, which replaces the
+        // store only if every one of them succeeds.
+        const draft = new Map(docs);
+        writes.forEach((apply) => apply(draft));
+        docs = draft;
         return value;
       });
       queue = result.catch(() => undefined);

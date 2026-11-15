@@ -4,12 +4,13 @@ const secret = z.string().min(32, 'must be at least 32 characters');
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  APP_URL: z.url().default('http://localhost:3000'),
+  APP_URL: z.url().optional(),
   DATA_STORE: z.enum(['memory', 'firestore']).optional(),
   GOOGLE_CLOUD_PROJECT: z.string().optional(),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
-  GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default('gemini-flash-latest'),
+  AI_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().default('gemma-4-31b-it'),
+  AI_BASE_URL: z.url().default('https://api.prod.adaptionlabs.ai'),
   EMAIL_PROVIDER: z.enum(['console', 'gmail']).default('console'),
   GMAIL_USER: z.email().optional(),
   GMAIL_APP_PASSWORD: z.string().optional(),
@@ -23,7 +24,8 @@ const envSchema = z.object({
 type Env = z.infer<typeof envSchema>;
 const SECRET_NAMES = ['SESSION_SECRET', 'PASSCODE_PEPPER', 'ACTION_TOKEN_SECRET'] as const;
 
-export interface Config extends Omit<Env, 'DATA_STORE' | (typeof SECRET_NAMES)[number]> {
+export interface Config extends Omit<Env, 'APP_URL' | 'DATA_STORE' | (typeof SECRET_NAMES)[number]> {
+  APP_URL: string;
   DATA_STORE: 'memory' | 'firestore';
   SESSION_SECRET: string;
   PASSCODE_PEPPER: string;
@@ -34,6 +36,8 @@ export interface Config extends Omit<Env, 'DATA_STORE' | (typeof SECRET_NAMES)[n
 function problems(env: Env): string[] {
   const missing: string[] = [];
   if (env.NODE_ENV === 'production') {
+    // Links in emails and the cookie's Secure flag both depend on it, so no silent default.
+    if (!env.APP_URL) missing.push('APP_URL');
     missing.push(...SECRET_NAMES.filter((name) => !env[name]));
     if (!env.CRON_SECRET && !env.CRON_SERVICE_ACCOUNT) missing.push('CRON_SECRET or CRON_SERVICE_ACCOUNT');
   }
@@ -59,7 +63,7 @@ export function parseConfig(source: Record<string, string | undefined>): Config 
   const devSecret = (name: string): string => `dev-only-${name}-never-used-in-production`;
   return Object.freeze({
     ...env,
-    APP_URL: env.APP_URL.replace(/\/+$/, ''),
+    APP_URL: (env.APP_URL ?? 'http://localhost:3000').replace(/\/+$/, ''),
     DATA_STORE: env.DATA_STORE ?? (env.NODE_ENV === 'production' ? 'firestore' : 'memory'),
     SESSION_SECRET: env.SESSION_SECRET ?? devSecret('session-secret'),
     PASSCODE_PEPPER: env.PASSCODE_PEPPER ?? devSecret('passcode-pepper'),

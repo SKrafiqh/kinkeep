@@ -1,0 +1,22 @@
+/** The icons the app uses, one family (Phosphor), imported one by one to keep bundles small. */
+export { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+export { BellRingingIcon } from '@phosphor-icons/react/dist/ssr/BellRinging';
+export { CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
+export { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+export { CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+export { CircleHalfIcon } from '@phosphor-icons/react/dist/ssr/CircleHalf';
+export { ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+export { EnvelopeSimpleIcon } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple';
+export { HandTapIcon } from '@phosphor-icons/react/dist/ssr/HandTap';
+export { MinusIcon } from '@phosphor-icons/react/dist/ssr/Minus';
+export { MinusCircleIcon } from '@phosphor-icons/react/dist/ssr/MinusCircle';
+export { NotebookIcon } from '@phosphor-icons/react/dist/ssr/Notebook';
+export { PillIcon } from '@phosphor-icons/react/dist/ssr/Pill';
+export { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+export { PrinterIcon } from '@phosphor-icons/react/dist/ssr/Printer';
+export { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+export { SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
+export { SunIcon } from '@phosphor-icons/react/dist/ssr/Sun';
+export { UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
+export { WarningCircleIcon } from '@phosphor-icons/react/dist/ssr/WarningCircle';
+export { XIcon } from '@phosphor-icons/react/dist/ssr/X';

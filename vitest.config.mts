@@ -11,7 +11,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/domain/**', 'src/server/**', 'src/lib/**'],
       // Thin adapters over real networks; exercised on the deployed app, not in unit tests.
-      exclude: ['src/server/repos/firestoreStore.ts', 'src/server/email/gmailSender.ts', 'src/server/ai/geminiClient.ts', 'src/server/auth/googleOidc.ts'],
+      exclude: ['src/server/repos/firestoreStore.ts', 'src/server/email/gmailSender.ts', 'src/server/auth/googleOidc.ts'],
       thresholds: { lines: 80, functions: 80, statements: 80 },
     },
   },

@@ -78,8 +78,10 @@ export function zonedToInstant(date: string, time: string, timeZone: string): nu
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
   const wall = Date.UTC(year, month - 1, day, hour, minute);
-  const firstGuess = wall - offsetMs(wall, timeZone);
-  return wall - offsetMs(firstGuess, timeZone);
+  // The zone's offset a day either side covers both sides of any clock change.
+  const candidates = [wall - offsetMs(wall - DAY_MS, timeZone), wall - offsetMs(wall + DAY_MS, timeZone)];
+  const exact = candidates.filter((instant) => localDate(instant, timeZone) === date && localTime(instant, timeZone) === time);
+  return Math.min(...(exact.length > 0 ? exact : candidates));
 }
 
 /** Calendar date (YYYY-MM-DD) of an instant in a zone. */

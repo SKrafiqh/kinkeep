@@ -59,10 +59,10 @@ phone · GET on the action link changes nothing.
 
 ### Phase 4 — Appointments and visit brief (P0-7, P0-10, P0-14)
 - Appointment CRUD; 24-hour and 2-hour reminders through the same engine
-- `AiClient` with Gemini adapter and fake; visit brief with schema validation, cache,
+- `AiClient` with an Adaption Labs adapter and fake; visit brief with schema validation, cache,
   non-AI fallback, print stylesheet
 
-Exit: brief renders with Gemini on and with Gemini forced off · malformed AI output is
+Exit: brief renders with AI on and with AI forced off · malformed AI output is
 rejected by a test · appointment reminder email arrives.
 
 ### Phase 5 — Elder control and polish (P0-12)
@@ -105,7 +105,7 @@ Cut from the bottom of this list first; the top rows are the brief itself.
 | Passcode access, medicines, Today, mark taken | All of P1 and P2 |
 | Upcoming, missed and appointment emails | Members page: seed three fixed roles instead |
 | Cloud Run deploy with a working URL | 30-day adherence: keep 7-day only |
-| One Gemini feature (visit brief) | Nudge stage: go straight from reminded to missed |
+| One AI feature (visit brief) | Nudge stage: go straight from reminded to missed |
 | Tests for domain logic, axe on main pages | What-changed feed: keep the log, drop the UI |
 
 A one-day window: Phases 0–4 with the cuts above, then Phase 6.

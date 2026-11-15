@@ -21,7 +21,7 @@ export interface World {
   emails: EmailMessage[];
   /** Flip to make the mail server fail. */
   mail: { failing: boolean };
-  /** What the fake Gemini returns; `calls` counts requests. */
+  /** What the fake AI model returns; `calls` counts requests. */
   ai: { reply: unknown; failing: boolean; calls: number };
 }
 

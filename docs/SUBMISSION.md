@@ -61,7 +61,7 @@ only after the code exists; do not claim scores.
 | Efficiency | `nextActionAt` query, server components, cached AI output, image size |
 | Testing | `tests/`, how to run, what is covered |
 | Accessibility | `docs/DESIGN.md` checklist, axe e2e, font and contrast choices |
-| Google services | Cloud Run, Firestore, Cloud Scheduler, Gemini, Secret Manager, Cloud Build, Gmail |
+| Google services | Cloud Run, Firestore, Cloud Scheduler, Secret Manager, Cloud Build, Cloud Logging, Gmail, Google Fonts |
 | Scalability | Stateless container, idempotent engine, growth path |
 
 ## 4. Brief description for the platform (edit to match what shipped)
@@ -69,9 +69,9 @@ only after the code exists; do not claim scores.
 > KinKeep is an elder-led care circle. The elder, caregivers and family share one
 > medication schedule and appointment list through personal passcodes. Email reminders
 > carry one-tap "Taken" links, missed doses escalate only to the people the elder has
-> chosen, every change is shown to the elder in plain words, and Gemini prepares a visit
+> chosen, every change is shown to the elder in plain words, and AI prepares a visit
 > brief before each doctor appointment. Runs on Cloud Run with Firestore, Cloud Scheduler
-> and Gemini.
+> and Adaption Labs AI.
 
 ## 5. Two-minute demo script for judges
 
@@ -103,10 +103,10 @@ Draft:
 > • Email reminders with a one-tap "Taken" button. No app, no login
 > • If a dose stays unconfirmed, it escalates only to the people the elder has chosen
 > • Every change is shown to the elder in plain words: who changed what, and when
-> • Before a doctor visit, Gemini prepares a one-page brief from what actually happened
+> • Before a doctor visit, AI prepares a one-page brief from what actually happened
 >
 > How it is built
-> Next.js on Cloud Run · Firestore · Cloud Scheduler · Gemini · built by prompting, with
+> Next.js on Cloud Run · Firestore · Cloud Scheduler · Adaption Labs AI · built by prompting, with
 > tests and an accessibility check on every page
 >
 > Try it: [live URL]

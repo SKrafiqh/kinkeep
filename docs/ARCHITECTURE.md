@@ -8,7 +8,7 @@
 | Hosting | Cloud Run | Required for the top-10 check; scales to zero and out automatically |
 | Data | Firestore, Native mode | Serverless, no connection pool to manage, free daily quota |
 | Scheduler | Cloud Scheduler → `POST /api/cron/tick` | Managed cron; one job drives every reminder |
-| AI | Gemini via `@google/genai` | Visit brief, prescription scan, summaries |
+| AI | Adaption Labs Responses API via `fetch` | Visit brief, prescription scan, summaries |
 | Email | Gmail SMTP via Nodemailer | Sends to any inbox without owning a domain |
 | Secrets | Secret Manager | Nothing sensitive in the repo or the image |
 | Build | Cloud Build (`gcloud run deploy --source .`) | No local Docker needed |
@@ -16,7 +16,7 @@
 | UI | Tailwind CSS, Atkinson Hyperlegible (Google Fonts) | Typeface designed for low-vision readers |
 | Quality | Zod, ESLint, Vitest, Playwright + axe, GitHub Actions | Validation, lint, tests, accessibility gate, CI |
 
-Google services in use: Cloud Run, Firestore, Cloud Scheduler, Gemini, Secret Manager,
+Google services in use: Cloud Run, Firestore, Cloud Scheduler, Secret Manager,
 Cloud Build, Cloud Logging, Gmail, Google Fonts.
 
 ## 2. System diagram
@@ -36,7 +36,7 @@ flowchart LR
   end
   E & C & F -->|HTTPS| UI --> API --> SVC --> DOM
   SVC --> FS[(Firestore)]
-  SVC --> GEM[Gemini API]
+  SVC --> GEM[Adaption Labs AI]
   SVC --> MAIL[Gmail SMTP]
   SCH[Cloud Scheduler, every 5 min] -->|OIDC POST /api/cron/tick| API
   SM[Secret Manager] -.->|env at start| CloudRun
@@ -87,6 +87,11 @@ All paths are under one circle, so every read is scoped by `circleId`.
 circles/{circleId}
   elderName, timeZone (IANA), code (unique, upper-case), createdAt
   settings: { leadMin: 15, nudgeMin: 30, escalateMin: 60 }
+  remindersTo?                       # member who gets the elder's own reminders; unset = the elder
+  nextSummaryAt?                     # next Sunday 18:00 local, for the weekly summary
+  demoPasscode?                      # demo circles only, shown in the demo banner
+
+circles/{circleId}/quota/{name}       # daily caps: { day, count } for 'ai' and 'testEmail'
 
 circles/{circleId}/members/{memberId}
   name, email?, role: 'elder' | 'caregiver' | 'family'
@@ -97,7 +102,8 @@ circles/{circleId}/members/{memberId}
 circles/{circleId}/medications/{medId}
   name, strength, form, instructions
   times: ['08:00', '20:00'], daysOfWeek: [0..6]
-  startDate, endDate?, active, pillCount?
+  startDate, endDate?, active
+  materialisedUntil?                 # dose events exist up to here; the tick tops this up
   createdBy, updatedBy, updatedAt
 
 circles/{circleId}/doseEvents/{medId_YYYYMMDD_HHmm}     # deterministic id
@@ -111,19 +117,24 @@ circles/{circleId}/doseEvents/{medId_YYYYMMDD_HHmm}     # deterministic id
 circles/{circleId}/appointments/{apptId}
   doctor, speciality, place, at (UTC), notes
   nextReminderAt?, remindersSent: { h24, h2 }
-  brief?: { text, generatedAt, source: 'ai' | 'fallback' }
+  brief?: { content: { summary, patterns[], changes[], questions[] }, generatedAt,
+            source: 'ai' | 'fallback', editedBy? }
 
 circles/{circleId}/activity/{activityId}
   actorId, actorName, action, targetType, targetId, summary, at
 
-usedTokens/{jti}                     # one-tap token replay guard; expireAt for TTL
+usedTokens/{jti}                     # one-tap token replay guard; expireAt has a TTL policy
+quota/{name}                         # app-wide daily caps: 'testEmail', 'demo'
 ```
 
 Indexes (`firestore.indexes.json`), collection-group scope:
 
 - `doseEvents.nextActionAt` ascending
 - `appointments.nextReminderAt` ascending
-- `circles.code` single-field (default)
+- `medications.materialisedUntil` ascending
+- `circles.code`, `circles.nextSummaryAt` single-field (default)
+
+`usedTokens.expireAt` carries a TTL policy, so used one-tap records delete themselves.
 
 `firestore.rules` denies every client read and write. Only the server, through the Admin
 SDK and the Cloud Run service account, touches the database.
@@ -240,8 +251,10 @@ part, a single primary action, 18 px or larger type, and no remote images.
 
 ## 9. AI
 
-`AiClient` interface; the Gemini adapter uses `@google/genai`. The model id comes from
-`GEMINI_MODEL` so it can be changed without a code change.
+`AiClient` interface; the adapter calls the Adaption Labs Responses API
+(`POST /api/v1/responses`) with plain `fetch`. The model id comes from `AI_MODEL` so it can be
+changed without a code change. That API documents no JSON mode, so the JSON Schema is stated
+in the instructions, the JSON object is cut out of the reply, and Zod rejects anything else.
 
 | Feature | Input | Output | Guardrails |
 | --- | --- | --- | --- |
@@ -288,7 +301,7 @@ appointment document.
 - Server components for reads; client JavaScript only where there is interaction.
 - No chart library: adherence bars are CSS.
 - Dose events carry the medicine name and strength, so the Today view is one query.
-- Gemini is called only on an explicit user action and the result is cached.
+- The AI model is called only on an explicit user action and the result is cached.
 - Multi-stage Docker build with Next.js standalone output for a small image and a fast
   cold start.
 

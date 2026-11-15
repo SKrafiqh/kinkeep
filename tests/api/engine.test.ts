@@ -166,7 +166,8 @@ describe('failed sends', () => {
     }
     const [dose] = await today();
     expect(dose).toMatchObject({ status: 'reminded', attempts: 3 });
-    expect(dose.lastError).toContain('mail server unavailable');
+    // A short code is stored, never the mail server's own words, which can hold an address.
+    expect(dose.lastError).toBe('Error');
   });
 });
 

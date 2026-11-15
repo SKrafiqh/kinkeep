@@ -9,7 +9,7 @@ Accounts
 
 - [ ] Google Cloud project with billing enabled (Cloud Run requires a billing account
       even inside the free tier)
-- [ ] Google AI Studio API key for Gemini
+- [ ] Adaption Labs API key (in the Adaption app: Settings, then API keys)
 - [ ] A Google account for sending email, with 2-Step Verification on and an app password
 - [ ] GitHub account; the repository must be public for submission
 - [ ] Hack2skill / PromptWars platform login
@@ -29,8 +29,10 @@ Local tools
 | --- | --- | --- | --- |
 | `APP_URL` | no | `https://kinkeep-xxxx.a.run.app` | Base URL for links in emails |
 | `GOOGLE_CLOUD_PROJECT` | no | `kinkeep-prod` | Firestore project (set automatically on Cloud Run) |
-| `GEMINI_API_KEY` | yes | | Gemini access |
-| `GEMINI_MODEL` | no | `gemini-flash-latest` | Model id; confirm the current Flash id in AI Studio |
+| `AI_API_KEY` | yes | | Adaption Labs key for the visit brief; empty means the non-AI brief |
+| `AI_MODEL` | no | `gemma-4-31b-it` | Adaption Labs model id (see docs.adaptionlabs.ai, Models) |
+| `AI_BASE_URL` | no | `https://api.prod.adaptionlabs.ai` | Adaption Labs API base URL |
+| `DATA_STORE` | no | `firestore` | `memory` for local runs without a database; production defaults to `firestore` |
 | `EMAIL_PROVIDER` | no | `gmail` or `console` | Which sender adapter to use |
 | `GMAIL_USER` | no | `kinkeep.demo@gmail.com` | Sender address |
 | `GMAIL_APP_PASSWORD` | yes | | 16-character app password |
@@ -85,7 +87,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member "serviceAccount:$RUN_SA" --role roles/secretmanager.secretAccessor
 
 # Secrets (repeat for each secret in the table)
-printf '%s' 'PASTE_VALUE' | gcloud secrets create GEMINI_API_KEY --data-file=-
+printf '%s' 'PASTE_VALUE' | gcloud secrets create AI_API_KEY --data-file=-
 printf '%s' 'PASTE_VALUE' | gcloud secrets create GMAIL_APP_PASSWORD --data-file=-
 openssl rand -base64 48 | tr -d '\n' | gcloud secrets create SESSION_SECRET --data-file=-
 openssl rand -base64 48 | tr -d '\n' | gcloud secrets create PASSCODE_PEPPER --data-file=-
@@ -97,22 +99,28 @@ Use a separate demo account, not a personal inbox.
 
 ## 5. Deploy
 
+The app refuses to start in production without `APP_URL` (links in emails and the Secure
+cookie depend on it). Cloud Run's URL is predictable, so set it on the first deploy:
+
 ```bash
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format 'value(projectNumber)')
+URL=https://kinkeep-$PROJECT_NUMBER.$REGION.run.app
+
 gcloud run deploy kinkeep --source . --region $REGION --allow-unauthenticated \
   --service-account $RUN_SA \
   --memory 512Mi --cpu 1 --min-instances 0 --max-instances 4 \
-  --set-env-vars EMAIL_PROVIDER=gmail,GMAIL_USER=YOUR_SENDER@gmail.com,GEMINI_MODEL=gemini-flash-latest,CRON_SERVICE_ACCOUNT=kinkeep-scheduler@$PROJECT_ID.iam.gserviceaccount.com \
-  --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest,GMAIL_APP_PASSWORD=GMAIL_APP_PASSWORD:latest,SESSION_SECRET=SESSION_SECRET:latest,PASSCODE_PEPPER=PASSCODE_PEPPER:latest,ACTION_TOKEN_SECRET=ACTION_TOKEN_SECRET:latest
+  --set-env-vars APP_URL=$URL,EMAIL_PROVIDER=gmail,GMAIL_USER=YOUR_SENDER@gmail.com,AI_MODEL=gemma-4-31b-it,CRON_SERVICE_ACCOUNT=kinkeep-scheduler@$PROJECT_ID.iam.gserviceaccount.com \
+  --set-secrets AI_API_KEY=AI_API_KEY:latest,GMAIL_APP_PASSWORD=GMAIL_APP_PASSWORD:latest,SESSION_SECRET=SESSION_SECRET:latest,PASSCODE_PEPPER=PASSCODE_PEPPER:latest,ACTION_TOKEN_SECRET=ACTION_TOKEN_SECRET:latest
 
-# The URL is known only after the first deploy; set it, then redeploy config
-URL=$(gcloud run services describe kinkeep --region $REGION --format 'value(status.url)')
-gcloud run services update kinkeep --region $REGION --update-env-vars APP_URL=$URL
+# Check the service really serves at that URL
+gcloud run services describe kinkeep --region $REGION --format 'value(status.urls)'
 ```
 
 If the first build fails on a permission error, grant the role named in the error to the
 build service account it names, then rerun.
 
-Indexes:
+Indexes, rules and the TTL on used one-tap links (run this before the first scheduler tick;
+without the indexes the reminder engine's queries fail):
 
 ```bash
 npx firebase-tools deploy --only firestore:indexes,firestore:rules --project $PROJECT_ID
@@ -149,8 +157,8 @@ The app verifies the token's signature, audience (`APP_URL`) and service-account
   pricing page; five secrets is a small footprint either way.
 - Gmail consumer accounts cap sending at roughly 500 recipients a day. Enough for
   judging; state it in the README.
-- Gemini free-tier limits vary by model and change often. Check the live limits for your
-  key in AI Studio before the demo, and keep the per-circle daily cap in place.
+- AI calls spend Adaption Labs credits. Only the visit brief calls the model, on a button
+  press, capped at 20 a day per circle and cached on the appointment.
 - Cold start: with `--min-instances 0` the first request after idle takes a few seconds.
   For the judging window, set `--min-instances 1` and set it back afterwards.
 - Set a budget alert on the billing account before deploying.

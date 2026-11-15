@@ -1,5 +1,5 @@
 import type { AiClient } from './ai/client';
-import { createGeminiClient } from './ai/geminiClient';
+import { createAdaptionClient } from './ai/adaptionClient';
 import type { OidcVerifier } from './auth/cron';
 import { googleOidcVerifier } from './auth/googleOidc';
 import { systemClock, type Clock } from './clock';
@@ -15,7 +15,7 @@ export interface Deps {
   store: DocStore;
   clock: Clock;
   email: EmailSender;
-  /** Null when no Gemini key is configured; AI features then use their fallback. */
+  /** Null when no AI key is configured; AI features then use their fallback. */
   ai: AiClient | null;
   oidc: OidcVerifier;
 }
@@ -30,7 +30,7 @@ function build(): Deps {
     store: config.DATA_STORE === 'firestore' ? createFirestoreStore(config) : createMemoryStore(),
     clock: systemClock,
     email: createEmailSender(config),
-    ai: config.GEMINI_API_KEY ? createGeminiClient(config.GEMINI_API_KEY, config.GEMINI_MODEL) : null,
+    ai: config.AI_API_KEY ? createAdaptionClient({ apiKey: config.AI_API_KEY, model: config.AI_MODEL, baseUrl: config.AI_BASE_URL }) : null,
     oidc: googleOidcVerifier,
   };
 }

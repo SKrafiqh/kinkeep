@@ -17,11 +17,19 @@ const buckets = new Map<string, Bucket>();
  * its own count, so this is best effort; member lockout in the database is the hard limit.
  */
 export function allowRequest(key: string, rule: RateLimit, now: number): boolean {
-  if (buckets.size >= MAX_BUCKETS) buckets.clear();
   const bucket = buckets.get(key) ?? { tokens: rule.limit, updatedAt: now };
   const refilled = Math.min(rule.limit, bucket.tokens + ((now - bucket.updatedAt) / rule.windowMs) * rule.limit);
   const allowed = refilled >= 1;
+  // Re-inserting keeps the map in least-recently-used order, so eviction drops idle callers
+  // first and a flood of new keys can never wipe an active caller's count.
+  buckets.delete(key);
   buckets.set(key, { tokens: allowed ? refilled - 1 : refilled, updatedAt: now });
+  if (buckets.size > MAX_BUCKETS) {
+    for (const oldest of buckets.keys()) {
+      buckets.delete(oldest);
+      if (buckets.size <= MAX_BUCKETS * 0.9) break;
+    }
+  }
   return allowed;
 }
 

@@ -96,7 +96,7 @@ export const dayQuerySchema = z.strictObject({ date: dateSchema.optional() });
 export const testReminderSchema = z.strictObject({ email: emailSchema });
 
 const briefLines = z.array(z.string().trim().min(1).max(400)).max(8);
-/** Used both to validate what Gemini returns and what a person saves after editing. */
+/** Used both to validate what the AI model returns and what a person saves after editing. */
 export const briefSchema = z.strictObject({
   summary: z.string().trim().min(1, 'Write a short summary.').max(1500),
   patterns: briefLines,

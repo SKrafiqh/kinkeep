@@ -58,7 +58,6 @@ export function buildCircle(input: {
     createdAt: now,
     settings: { ...REMINDER_DEFAULTS },
     nextSummaryAt: nextWeeklySummaryAt(now, input.timeZone),
-    ai: { day: '', count: 0 },
   };
 }
 

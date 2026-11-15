@@ -40,7 +40,7 @@ go to a caregiver they choose.
    stays unconfirmed.
 3. **One tap.** Confirming a dose never needs a login: the email itself carries the action.
 4. **Readable by default.** Large type, strong contrast, plain language, no jargon.
-5. **AI drafts, people decide.** Gemini prepares; a person confirms. No medical advice.
+5. **AI drafts, people decide.** AI prepares; a person confirms. No medical advice.
 
 ## 5. Scope
 
@@ -61,12 +61,12 @@ go to a caregiver they choose.
 | P0-11 | One-tap actions | Each dose email has Taken and Skip links. The link opens a confirm page; the action happens on the button press. Links expire and work once. |
 | P0-12 | Elder control | Per member, the elder sets role and three alert switches: missed doses, appointments, weekly summary. |
 | P0-13 | What changed | Every create, edit, delete and role change is recorded with who and when, shown as a plain-language feed on the elder's home. |
-| P0-14 | Visit brief (Gemini) | For any upcoming appointment, generate a one-page brief: adherence since the last visit, missed-dose patterns, medicine changes, and questions to ask. Printable. Shows the "not medical advice" line. |
+| P0-14 | Visit brief (AI) | For any upcoming appointment, generate a one-page brief: adherence since the last visit, missed-dose patterns, medicine changes, and questions to ask. Printable. Shows the "not medical advice" line. |
 | P0-15 | Demo circle | "Try a demo" creates a sample circle with realistic data and a dose due in a few minutes. "Send me a test reminder" sends one real email to the address entered, rate limited. |
 
 ### P1 — differentiators, build in this order after P0 is deployed and green
 
-1. **Add by photo.** Photograph or paste a prescription or medicine label; Gemini returns
+1. **Add by photo.** Photograph or paste a prescription or medicine label; the AI returns
    a draft schedule; the user corrects and confirms each line.
 2. **Ask before you change.** Edits by caregivers to a medicine arrive as a proposal the
    elder approves or declines. A circle-level switch lets the elder delegate approval to
@@ -120,7 +120,7 @@ Metformin from 500 mg to 1000 mg, yesterday 6:10 pm".
 - No dosing advice, no diagnosis, no interaction verdicts. The brief may list "questions
   to ask your doctor or pharmacist".
 - Every AI output is labelled as AI-generated and editable before it is saved or printed.
-- If Gemini fails or is rate limited, the visit brief falls back to a non-AI version
+- If the AI model fails or is rate limited, the visit brief falls back to a non-AI version
   built from the same data.
 
 ## 9. Non-goals

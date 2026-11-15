@@ -60,7 +60,11 @@ export async function performAction(deps: Deps, token: string, action: DoseActio
     expireAt: new Date(claims.exp * 1000),
   });
   if (!firstUse) throw new AppError('CONFLICT', 'This link was already used. Open the app to see today’s doses.');
-  const settled = await actOnSlot(deps, claims.circleId, doses[0].slotKey, action, claims.memberId);
+  const settled = await actOnSlot(deps, claims.circleId, doses[0].slotKey, action, claims.memberId).catch(async (error: unknown) => {
+    // The dose was not marked, so give the link back rather than leave the person stuck.
+    await deps.store.delete(paths.usedToken(claims.jti));
+    throw error;
+  });
   if (settled.length === 0) throw new AppError('CONFLICT', 'These medicines were already marked. Nothing was changed.');
   return { count: settled.length };
 }

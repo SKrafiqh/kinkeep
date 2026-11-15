@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+.claude
+coverage
+playwright-report
+test-results
+tests
+docs
+*.md
+.env
+.env.*
+*.zip
+Dockerfile
+.dockerignore

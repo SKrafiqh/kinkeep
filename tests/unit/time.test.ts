@@ -36,6 +36,22 @@ describe('zonedToInstant', () => {
     expect(zonedToInstant('2026-11-01', '01:30', NEW_YORK)).toBe(Date.UTC(2026, 10, 1, 5, 30));
   });
 
+  it('treats clock changes the same way east of UTC', () => {
+    // London, 29 Mar 2026: 01:30 is skipped, so it maps to the hour before (00:30 GMT).
+    expect(zonedToInstant('2026-03-29', '01:30', 'Europe/London')).toBe(Date.UTC(2026, 2, 29, 0, 30));
+    // London, 25 Oct 2026: 01:30 happens twice; the first one is still summer time.
+    expect(zonedToInstant('2026-10-25', '01:30', 'Europe/London')).toBe(Date.UTC(2026, 9, 25, 0, 30));
+    // Sydney, 4 Oct 2026: 02:30 is skipped, so it maps to 01:30 standard time.
+    expect(zonedToInstant('2026-10-04', '02:30', 'Australia/Sydney')).toBe(Date.UTC(2026, 9, 3, 15, 30));
+    expect(zonedToInstant('2026-10-04', '08:00', 'Australia/Sydney')).toBe(Date.UTC(2026, 9, 3, 21, 0));
+  });
+
+  it('is right the evening before and the morning after a clock change', () => {
+    expect(zonedToInstant('2026-03-07', '20:00', NEW_YORK)).toBe(Date.UTC(2026, 2, 8, 1, 0));
+    expect(zonedToInstant('2026-03-08', '20:00', NEW_YORK)).toBe(Date.UTC(2026, 2, 9, 0, 0));
+    expect(zonedToInstant('2026-10-31', '23:00', NEW_YORK)).toBe(Date.UTC(2026, 10, 1, 3, 0));
+  });
+
   it('round-trips through localDate and localTime', () => {
     const instant = zonedToInstant('2026-07-04', '23:45', NEW_YORK);
     expect(localDate(instant, NEW_YORK)).toBe('2026-07-04');

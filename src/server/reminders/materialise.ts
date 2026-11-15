@@ -1,7 +1,10 @@
 import { isOpen } from '@/domain/escalation';
 import { planMaterialisation } from '@/domain/schedule';
-import type { Circle, Medication } from '@/domain/types';
+import type { Circle, DoseEvent, Medication } from '@/domain/types';
 import { HOUR_MS, MATERIALISE_HOURS } from '@/lib/constants';
+
+/** A dose stays open for an hour after it is due; two hours back is sure to cover them all. */
+const PAST_OPEN_HOURS = 2;
 import type { Deps } from '../deps';
 import { paths } from '../repos/paths';
 import { listDoses } from '../repos/queries';
@@ -19,9 +22,23 @@ export async function materialiseMedication(deps: Deps, circle: Circle, med: Med
   return created.filter(Boolean).length;
 }
 
-/** Deletes a medicine's future unconfirmed doses. Past and confirmed doses are history and stay. */
-export async function clearFutureDoses(deps: Deps, circleId: string, medId: string, now: number): Promise<void> {
-  const ahead = await listDoses(deps.store, circleId, now, now + (MATERIALISE_HOURS + 1) * HOUR_MS);
-  const stale = ahead.filter((dose) => dose.medId === medId && dose.dueAt > now && isOpen(dose.status));
-  await Promise.all(stale.map((dose) => deps.store.delete(paths.dose(circleId, dose.id))));
+/**
+ * Deletes a medicine's future unconfirmed doses. With `silencePast` (pause or delete), doses
+ * already due stop being reminded about too. Confirmed doses are history and always stay.
+ */
+export async function clearFutureDoses(deps: Deps, circleId: string, medId: string, now: number, silencePast = false): Promise<void> {
+  const nearby = await listDoses(deps.store, circleId, now - PAST_OPEN_HOURS * HOUR_MS, now + (MATERIALISE_HOURS + 1) * HOUR_MS);
+  const open = nearby.filter((dose) => dose.medId === medId && isOpen(dose.status));
+  await Promise.all(
+    open.map((dose) => {
+      const path = paths.dose(circleId, dose.id);
+      // Re-read in a transaction: a dose confirmed a moment ago must not be deleted.
+      return deps.store.transaction(async (tx) => {
+        const fresh = await tx.get<DoseEvent>(path);
+        if (!fresh || !isOpen(fresh.status)) return;
+        if (fresh.dueAt > now) tx.delete(path);
+        else if (silencePast) tx.update(path, { nextActionAt: null });
+      });
+    }),
+  );
 }
