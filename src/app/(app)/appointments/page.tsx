@@ -54,14 +54,17 @@ export default async function AppointmentsPage() {
       </div>
       {upcoming.length === 0 ? (
         <EmptyState title="No upcoming appointments">
-          Doctor visits added here get an email reminder 24 hours and 2 hours before, and a one-page brief to take along.
+          Doctor visits added here get an email reminder 24 hours and 2 hours before, and a one-page brief to take
+          along.
         </EmptyState>
       ) : (
         <VisitList visits={upcoming} circle={circle} />
       )}
       {past.length > 0 ? (
         <details>
-          <summary className="link inline-flex min-h-12 cursor-pointer items-center">Past appointments ({past.length})</summary>
+          <summary className="link inline-flex min-h-12 cursor-pointer items-center">
+            Past appointments ({past.length})
+          </summary>
           <div className="mt-4">
             <VisitList visits={past} circle={circle} />
           </div>

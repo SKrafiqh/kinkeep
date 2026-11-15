@@ -2,6 +2,8 @@ import { MINUTE_MS } from '@/lib/constants';
 import type { DoseAction, DoseEvent, DoseStatus, ReminderSettings } from './types';
 
 type OpenStatus = 'scheduled' | 'reminded' | 'nudged';
+/** A dose that is due reads as late once it is this overdue. */
+const LATE_AFTER_MINUTES = 5;
 const RANK: Record<OpenStatus | 'missed', number> = { scheduled: 0, reminded: 1, nudged: 2, missed: 3 };
 
 /** A dose nobody has confirmed yet and the engine may still remind about. */
@@ -53,5 +55,5 @@ export function doseView(event: Pick<DoseEvent, 'status' | 'dueAt' | 'late'>, no
   if (event.status === 'taken') return event.late ? 'taken-late' : 'taken';
   if (event.status === 'skipped' || event.status === 'missed') return event.status;
   if (now < event.dueAt) return event.status === 'scheduled' ? 'upcoming' : 'due';
-  return now - event.dueAt < 5 * MINUTE_MS ? 'due' : 'late';
+  return now - event.dueAt < LATE_AFTER_MINUTES * MINUTE_MS ? 'due' : 'late';
 }

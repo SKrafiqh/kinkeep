@@ -14,17 +14,28 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(digest(a), digest(b));
 }
 
+function bearerToken(request: Request): string | null {
+  return request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1] ?? null;
+}
+
+function secretMatches(secret: string | undefined, offered: string | null): boolean {
+  if (!secret || !offered) return false;
+  return safeEqual(offered, secret);
+}
+
+async function isSchedulerAccount(bearer: string | null, config: Config, oidc: OidcVerifier): Promise<boolean> {
+  if (!config.CRON_SERVICE_ACCOUNT || !bearer) return false;
+  const claims = await oidc.verify(bearer, config.APP_URL);
+  return claims?.emailVerified === true && claims.email === config.CRON_SERVICE_ACCOUNT;
+}
+
 /**
  * Lets the reminder tick run only for Cloud Scheduler's service account (signed OIDC token)
  * or a caller holding CRON_SECRET (other schedulers, local development).
  */
 export async function authoriseCron(request: Request, config: Config, oidc: OidcVerifier): Promise<void> {
-  const bearer = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1] ?? null;
-  const offered = request.headers.get('x-cron-secret') ?? bearer;
-  if (config.CRON_SECRET && offered && safeEqual(offered, config.CRON_SECRET)) return;
-  if (config.CRON_SERVICE_ACCOUNT && bearer) {
-    const claims = await oidc.verify(bearer, config.APP_URL);
-    if (claims?.emailVerified && claims.email === config.CRON_SERVICE_ACCOUNT) return;
-  }
+  const bearer = bearerToken(request);
+  if (secretMatches(config.CRON_SECRET, request.headers.get('x-cron-secret') ?? bearer)) return;
+  if (await isSchedulerAccount(bearer, config, oidc)) return;
   throw new AppError('UNAUTHENTICATED', 'This endpoint is for the scheduler only.');
 }

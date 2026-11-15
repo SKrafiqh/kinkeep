@@ -20,8 +20,38 @@ function SetupPasscode({ added, circleCode }: { added: Added; circleCode: string
         Give them the circle code <strong>{circleCode}</strong> and this one-time passcode:
       </p>
       <p className="text-[2rem] font-bold tracking-[0.2em]">{added.setupPasscode}</p>
-      <p>They choose their own passcode the first time they sign in. This one is shown only once. All their alerts start switched off.</p>
+      <p>
+        They choose their own passcode the first time they sign in. This one is shown only once. All their alerts start
+        switched off.
+      </p>
     </div>
+  );
+}
+
+function MemberFields({ fields }: { fields: Record<string, string> }) {
+  return (
+    <>
+      <Field name="name" label="Their name" autoComplete="off" error={fields.name} />
+      <Field
+        name="email"
+        label="Their email (optional)"
+        hint="Needed only if they should get emails."
+        type="email"
+        autoComplete="off"
+        error={fields.email}
+      />
+      <Field
+        name="role"
+        label="Their role"
+        hint="Caregivers can change medicines and appointments. Family can only look."
+        as="select"
+        defaultValue="family"
+        error={fields.role}
+      >
+        <option value="caregiver">Caregiver</option>
+        <option value="family">Family</option>
+      </Field>
+    </>
   );
 }
 
@@ -31,14 +61,17 @@ export function AddMemberForm({ circleCode }: { circleCode: string }) {
   const form = useRef<HTMLFormElement>(null);
   const [added, setAdded] = useState<Added | null>(null);
   const { run, pending, error } = useAction<Added>();
-  const fields = error?.fields ?? {};
   useFocusFirstError(form, error);
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const email = String(data.get('email') ?? '').trim();
-    const body = { name: String(data.get('name') ?? ''), email: email === '' ? null : email, role: String(data.get('role')) };
+    const body = {
+      name: String(data.get('name') ?? ''),
+      email: email === '' ? null : email,
+      role: String(data.get('role')),
+    };
     const result = await run('/api/members', 'POST', body, `${body.name} was added to the circle.`);
     if (!result) return;
     setAdded(result);
@@ -49,12 +82,7 @@ export function AddMemberForm({ circleCode }: { circleCode: string }) {
   return (
     <form ref={form} onSubmit={submit} noValidate className="card grid gap-6">
       <h2>Add someone</h2>
-      <Field name="name" label="Their name" autoComplete="off" error={fields.name} />
-      <Field name="email" label="Their email (optional)" hint="Needed only if they should get emails." type="email" autoComplete="off" error={fields.email} />
-      <Field name="role" label="Their role" hint="Caregivers can change medicines and appointments. Family can only look." as="select" defaultValue="family" error={fields.role}>
-        <option value="caregiver">Caregiver</option>
-        <option value="family">Family</option>
-      </Field>
+      <MemberFields fields={error?.fields ?? {}} />
       <FormError error={error} />
       <button type="submit" className="btn btn-primary justify-self-start" disabled={pending}>
         {pending ? 'Adding…' : 'Add member'}

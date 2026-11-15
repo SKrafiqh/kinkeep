@@ -16,7 +16,10 @@ export function formatTimes(times: string[]): string {
 /** "every day" or "Mon, Wed, Fri". */
 export function formatDays(daysOfWeek: number[]): string {
   if (daysOfWeek.length === 7) return 'every day';
-  return [...daysOfWeek].sort().map((day) => DAY_NAMES[day]).join(', ');
+  return [...daysOfWeek]
+    .sort()
+    .map((day) => DAY_NAMES[day])
+    .join(', ');
 }
 
 function changedParts(before: MedicationFields, after: MedicationFields): string[] {
@@ -43,7 +46,11 @@ export function medicationChangeSummary(actor: string, before: MedicationFields,
   const parts = changedParts(before, after);
   if (before.active !== after.active) {
     const verb = after.active ? 'resumed' : 'paused';
-    return parts.length === 0 ? `${actor} ${verb} ${before.name}` : `${actor} ${verb} and changed ${before.name} ${parts.join(', ')}`;
+    return parts.length === 0
+      ? `${actor} ${verb} ${before.name}`
+      : `${actor} ${verb} and changed ${before.name} ${parts.join(', ')}`;
   }
-  return parts.length === 0 ? `${actor} saved ${before.name} with no changes` : `${actor} changed ${before.name} ${parts.join(', ')}`;
+  return parts.length === 0
+    ? `${actor} saved ${before.name} with no changes`
+    : `${actor} changed ${before.name} ${parts.join(', ')}`;
 }

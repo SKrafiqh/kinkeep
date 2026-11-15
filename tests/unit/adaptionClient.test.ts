@@ -18,7 +18,13 @@ describe('replyText', () => {
   });
 
   it('joins the output_text parts when output_text is absent', () => {
-    const body = { output: [{ content: [{ type: 'output_text', text: '{"a":' }, { type: 'reasoning' }, { type: 'output_text', text: '1}' }] }] };
+    const body = {
+      output: [
+        {
+          content: [{ type: 'output_text', text: '{"a":' }, { type: 'reasoning' }, { type: 'output_text', text: '1}' }],
+        },
+      ],
+    };
     expect(replyText(body)).toBe('{"a":1}');
   });
 
@@ -56,7 +62,9 @@ describe('createAdaptionClient', () => {
 
   it('fails with the status only, never the error body', async () => {
     stubFetch(402, { error: 'insufficient credits for org 123' });
-    const error = await createAdaptionClient(OPTIONS).generateJson(REQUEST).catch((reason: unknown) => reason);
+    const error = await createAdaptionClient(OPTIONS)
+      .generateJson(REQUEST)
+      .catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toBe('AI request failed with status 402');
   });

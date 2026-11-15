@@ -19,6 +19,38 @@ function nextDoseLine(med: Medication, now: number, timeZone: string): string {
   return next ? `Next dose: ${formatWhen(next.dueAt, now, timeZone)}` : 'No more doses are scheduled.';
 }
 
+function MedicineCard({
+  med,
+  now,
+  timeZone,
+  canWrite,
+}: {
+  med: Medication;
+  now: number;
+  timeZone: string;
+  canWrite: boolean;
+}) {
+  return (
+    <li className="card grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div>
+        <h2>
+          {med.name} <span className="font-normal">{med.strength}</span>
+        </h2>
+        <p>
+          {med.form}, {formatTimes(med.times)}, {formatDays(med.daysOfWeek)}
+          {med.instructions ? `. ${med.instructions}` : ''}
+        </p>
+        <p className={med.active ? 'font-bold text-due' : 'font-bold text-muted'}>{nextDoseLine(med, now, timeZone)}</p>
+      </div>
+      {canWrite ? (
+        <Link href={`/medications/${med.id}`} className="btn btn-secondary justify-self-start">
+          Edit<span className="sr-only"> {med.name}</span>
+        </Link>
+      ) : null}
+    </li>
+  );
+}
+
 export default async function MedicationsPage() {
   const { circle, member } = await requireMember();
   const deps = getDeps();
@@ -46,23 +78,7 @@ export default async function MedicationsPage() {
       ) : (
         <ul className="grid gap-4">
           {medicines.map((med) => (
-            <li key={med.id} className="card grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-              <div>
-                <h2>
-                  {med.name} <span className="font-normal">{med.strength}</span>
-                </h2>
-                <p>
-                  {med.form}, {formatTimes(med.times)}, {formatDays(med.daysOfWeek)}
-                  {med.instructions ? `. ${med.instructions}` : ''}
-                </p>
-                <p className={med.active ? 'font-bold text-due' : 'font-bold text-muted'}>{nextDoseLine(med, now, circle.timeZone)}</p>
-              </div>
-              {canWrite ? (
-                <Link href={`/medications/${med.id}`} className="btn btn-secondary justify-self-start">
-                  Edit<span className="sr-only"> {med.name}</span>
-                </Link>
-              ) : null}
-            </li>
+            <MedicineCard key={med.id} med={med} now={now} timeZone={circle.timeZone} canWrite={canWrite} />
           ))}
         </ul>
       )}

@@ -26,10 +26,21 @@ function toSlots(doses: DoseEvent[], now: number, timeZone: string): Slot[] {
   const groups = new Map<string, DoseEvent[]>();
   for (const dose of doses) groups.set(dose.slotKey, [...(groups.get(dose.slotKey) ?? []), dose]);
   return [...groups.entries()].map(([key, group]) => {
-    const views = group.map((dose) => ({ id: dose.id, medName: dose.medName, strength: dose.strength, view: doseView(dose, now) }));
+    const views = group.map((dose) => ({
+      id: dose.id,
+      medName: dose.medName,
+      strength: dose.strength,
+      view: doseView(dose, now),
+    }));
     const open = views.find((dose) => dose.view === 'upcoming' || dose.view === 'due' || dose.view === 'late');
     const missed = views.find((dose) => dose.view === 'missed');
-    return { key, time: formatTime(group[0].dueAt, timeZone), doses: views, actionId: (open ?? missed)?.id ?? null, missed: !open && Boolean(missed) };
+    return {
+      key,
+      time: formatTime(group[0].dueAt, timeZone),
+      doses: views,
+      actionId: (open ?? missed)?.id ?? null,
+      missed: !open && Boolean(missed),
+    };
   });
 }
 
@@ -45,13 +56,67 @@ const SPOKEN: Record<DoseView, string> = {
 
 /** What Read aloud says: the same facts as the screen, as sentences. */
 function spokenDay(title: string, date: string, slots: Slot[], progress: string): string {
-  const parts = slots.map((slot) => `At ${slot.time}: ${slot.doses.map((dose) => `${dose.medName} ${dose.strength}, ${SPOKEN[dose.view]}`).join('; ')}.`);
-  return [`${title}.`, `${formatDate(date)}.`, progress, ...(parts.length > 0 ? parts : ['No medicines are due today.'])].join(' ');
+  const parts = slots.map(
+    (slot) =>
+      `At ${slot.time}: ${slot.doses.map((dose) => `${dose.medName} ${dose.strength}, ${SPOKEN[dose.view]}`).join('; ')}.`,
+  );
+  return [
+    `${title}.`,
+    `${formatDate(date)}.`,
+    progress,
+    ...(parts.length > 0 ? parts : ['No medicines are due today.']),
+  ].join(' ');
 }
 
 function greeting(hour: number): string {
   if (hour < 12) return 'Good morning';
   return hour < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+function TodayHeader({
+  title,
+  date,
+  slots,
+  progress,
+}: {
+  title: string;
+  date: string;
+  slots: Slot[];
+  progress: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1>{title}</h1>
+        <p>
+          {formatDate(date)}
+          {progress ? `. ${progress}` : ''}
+        </p>
+      </div>
+      <ReadAloud text={spokenDay(title, date, slots, progress)} />
+    </div>
+  );
+}
+
+function SlotCards({ slots, canAct }: { slots: Slot[]; canAct: boolean }) {
+  const nextKey = slots.find((slot) => slot.actionId !== null)?.key;
+  return slots.map((slot) => (
+    <DoseSlotCard
+      key={slot.key}
+      slotTime={slot.time}
+      doses={slot.doses}
+      actions={
+        canAct && slot.actionId ? (
+          <SlotActions
+            doseId={slot.actionId}
+            slotTime={slot.time}
+            missed={slot.missed}
+            primary={slot.key === nextKey}
+          />
+        ) : undefined
+      }
+    />
+  ));
 }
 
 /** The elder-first view: today's medicines in time order, one large action per slot. */
@@ -62,36 +127,27 @@ export default async function TodayPage() {
   const { date, doses } = await listDay(deps, circle);
   const slots = toSlots(doses, now, circle.timeZone);
   const canAct = can(member.role, 'dose:act');
-  const nextKey = slots.find((slot) => slot.actionId !== null)?.key;
   const taken = doses.filter((dose) => dose.status === 'taken').length;
-  const title = member.role === 'elder' ? `${greeting(zonedParts(now, circle.timeZone).hour)}, ${member.name}` : `${circle.elderName}’s medicines today`;
+  const title =
+    member.role === 'elder'
+      ? `${greeting(zonedParts(now, circle.timeZone).hour)}, ${member.name}`
+      : `${circle.elderName}’s medicines today`;
   const progress = doses.length > 0 ? `${taken} of ${doses.length} taken so far.` : '';
 
   return (
     <div className="today grid gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1>{title}</h1>
-          <p>
-            {formatDate(date)}
-            {progress ? `. ${progress}` : ''}
-          </p>
-        </div>
-        <ReadAloud text={spokenDay(title, date, slots, progress)} />
-      </div>
+      <TodayHeader title={title} date={date} slots={slots} progress={progress} />
       {slots.length === 0 ? (
-        <EmptyState title="No medicines are due today" action={can(member.role, 'medication:write') ? { href: '/medications/new', label: 'Add a medicine' } : undefined}>
+        <EmptyState
+          title="No medicines are due today"
+          action={
+            can(member.role, 'medication:write') ? { href: '/medications/new', label: 'Add a medicine' } : undefined
+          }
+        >
           When a medicine is added, each dose shows here at its time, with one button to confirm it.
         </EmptyState>
       ) : null}
-      {slots.map((slot) => (
-        <DoseSlotCard
-          key={slot.key}
-          slotTime={slot.time}
-          doses={slot.doses}
-          actions={canAct && slot.actionId ? <SlotActions doseId={slot.actionId} slotTime={slot.time} missed={slot.missed} primary={slot.key === nextKey} /> : undefined}
-        />
-      ))}
+      <SlotCards slots={slots} canAct={canAct} />
       {canAct ? <TestReminderForm /> : null}
     </div>
   );

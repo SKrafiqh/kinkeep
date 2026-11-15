@@ -21,7 +21,10 @@ export function SlotActions({ doseId, slotTime, missed, primary }: Props) {
   const { run, pending, error } = useAction();
 
   async function mark(action: 'taken' | 'skipped'): Promise<void> {
-    const done = action === 'taken' ? `Marked as taken. Your ${slotTime} medicines are done.` : `Skipped. Your ${slotTime} medicines are marked as skipped.`;
+    const done =
+      action === 'taken'
+        ? `Marked as taken. Your ${slotTime} medicines are done.`
+        : `Skipped. Your ${slotTime} medicines are marked as skipped.`;
     if ((await run(`/api/doses/${doseId}/act`, 'POST', { action, slot: true }, done)) !== null) router.refresh();
   }
 
@@ -39,7 +42,13 @@ export function SlotActions({ doseId, slotTime, missed, primary }: Props) {
           {pending ? 'Saving…' : missed ? 'Taken late' : 'Taken'}
         </button>
         {missed ? null : (
-          <button type="button" className="btn btn-quiet" disabled={pending} aria-label={`Skip: ${slotTime} medicines`} onClick={() => mark('skipped')}>
+          <button
+            type="button"
+            className="btn btn-quiet"
+            disabled={pending}
+            aria-label={`Skip: ${slotTime} medicines`}
+            onClick={() => mark('skipped')}
+          >
             Skip
           </button>
         )}

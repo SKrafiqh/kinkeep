@@ -1,4 +1,6 @@
+import { GET as lookupRoute } from '@/app/api/circles/lookup/route';
 import { POST as createCircleRoute } from '@/app/api/circles/route';
+import { POST as signInRoute } from '@/app/api/session/route';
 import { resetRateLimits } from '@/server/auth/rateLimit';
 import { parseConfig } from '@/server/config';
 import { setDeps, type Deps } from '@/server/deps';
@@ -52,7 +54,10 @@ export function createWorld(options: { withAi?: boolean } = {}): World {
               return ai.reply;
             },
           },
-    oidc: { verify: async (token, audience) => (token === 'good-oidc' && audience === ORIGIN ? { email: SCHEDULER, emailVerified: true } : null) },
+    oidc: {
+      verify: async (token, audience) =>
+        token === 'good-oidc' && audience === ORIGIN ? { email: SCHEDULER, emailVerified: true } : null,
+    },
   };
   setDeps(deps);
   return { deps, time, emails, mail, ai };
@@ -88,17 +93,30 @@ function pathOf(handler: Handler): string {
   return path;
 }
 
-/** Calls a route handler the way Next.js would and unwraps the response envelope. */
-export async function call(handler: Handler, options: CallOptions = {}): Promise<CallResult> {
-  const method = options.method ?? (options.body === undefined ? 'GET' : 'POST');
-  const headers = new Headers({ host: 'localhost:3000', 'x-forwarded-for': options.ip ?? '203.0.113.7', ...options.headers });
+function requestHeaders(options: CallOptions): Headers {
+  const headers = new Headers({
+    host: 'localhost:3000',
+    'x-forwarded-for': options.ip ?? '203.0.113.7',
+    ...options.headers,
+  });
   if (options.origin !== null) headers.set('origin', options.origin ?? ORIGIN);
   if (options.cookie) headers.set('cookie', options.cookie);
   if (options.body !== undefined) headers.set('content-type', 'application/json');
+  return headers;
+}
+
+function requestBody(body: unknown): string | undefined {
+  if (body === undefined) return undefined;
+  return typeof body === 'string' ? body : JSON.stringify(body);
+}
+
+/** Calls a route handler the way Next.js would and unwraps the response envelope. */
+export async function call(handler: Handler, options: CallOptions = {}): Promise<CallResult> {
+  const method = options.method ?? (options.body === undefined ? 'GET' : 'POST');
   const request = new Request(`${ORIGIN}${pathOf(handler)}${options.query ?? ''}`, {
     method,
-    headers,
-    body: options.body === undefined ? undefined : typeof options.body === 'string' ? options.body : JSON.stringify(options.body),
+    headers: requestHeaders(options),
+    body: requestBody(options.body),
   });
   const response = await handler(request, { params: Promise.resolve(options.params ?? {}) });
   const json = (await response.json()) as { data?: unknown; error?: CallResult['error'] };
@@ -120,10 +138,19 @@ export const CIRCLE_INPUT = {
 };
 
 /** Creates a circle through the API. Returns the creator's session cookie and the circle code. */
-export async function createCircle(overrides: Partial<typeof CIRCLE_INPUT> = {}): Promise<{ cookie: string; code: string; data: CallResult['data'] }> {
+export async function createCircle(
+  overrides: Partial<typeof CIRCLE_INPUT> = {},
+): Promise<{ cookie: string; code: string; data: CallResult['data'] }> {
   const result = await call(createCircleRoute, { body: { ...CIRCLE_INPUT, ...overrides } });
   if (result.status !== 200 || !result.cookie) throw new Error(`createCircle failed: ${JSON.stringify(result.error)}`);
   return { cookie: result.cookie, code: result.data.code, data: result.data };
+}
+
+/** Signs in through the join screen's two calls: look up the circle, then send the passcode. */
+export async function signIn(code: string, name: string, passcode: string, ip?: string) {
+  const found = await call(lookupRoute, { query: `?code=${code}`, ip });
+  const memberId = found.data.members.find((m: { name: string }) => m.name === name).id;
+  return call(signInRoute, { body: { code, memberId, passcode }, ip });
 }
 
 export const MEDICINE_INPUT = {

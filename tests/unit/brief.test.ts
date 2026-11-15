@@ -66,7 +66,13 @@ describe('fallbackBrief', () => {
   });
 
   it('reads sensibly with no data at all', () => {
-    const empty = fallbackBrief({ ...FACTS, overall: { taken: 0, total: 0, percent: null }, patterns: [], changes: [], notes: '' });
+    const empty = fallbackBrief({
+      ...FACTS,
+      overall: { taken: 0, total: 0, percent: null },
+      patterns: [],
+      changes: [],
+      notes: '',
+    });
     expect(empty).toEqual({
       summary: 'No doses were recorded for Mr Rao in the last 30 days.',
       patterns: ['No missed-dose pattern stands out.'],

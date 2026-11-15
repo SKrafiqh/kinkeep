@@ -41,17 +41,34 @@ export const FEATURES = [
 ];
 
 export const STEPS = [
-  { time: '7:45 am', title: 'One reminder', text: 'An email to the elder lists every 8:00 medicine, with an I took them button.' },
-  { time: '8:00 am', title: 'One tap', text: 'The elder taps Taken, in the app or the email. Everything stops here and nobody else is emailed.' },
+  {
+    time: '7:45 am',
+    title: 'One reminder',
+    text: 'An email to the elder lists every 8:00 medicine, with an I took them button.',
+  },
+  {
+    time: '8:00 am',
+    title: 'One tap',
+    text: 'The elder taps Taken, in the app or the email. Everything stops here and nobody else is emailed.',
+  },
   { time: '8:30 am', title: 'A gentle nudge', text: 'Still unconfirmed? A second email, to the same person only.' },
-  { time: '9:00 am', title: 'The right people hear', text: 'Still unconfirmed, the dose is marked missed and only the people the elder chose are told. It can still be marked as taken late.' },
+  {
+    time: '9:00 am',
+    title: 'The right people hear',
+    text: 'Still unconfirmed, the dose is marked missed and only the people the elder chose are told. It can still be marked as taken late.',
+  },
 ];
 
 export const ROLES = [
   {
     name: 'The elder',
     lead: 'Runs the circle.',
-    can: ['Marks doses taken with one tap', 'Decides each person’s role and alerts', 'Sees every change in plain words', 'Adds or removes anyone, at once'],
+    can: [
+      'Marks doses taken with one tap',
+      'Decides each person’s role and alerts',
+      'Sees every change in plain words',
+      'Adds or removes anyone, at once',
+    ],
   },
   {
     name: 'Caregivers',
@@ -66,7 +83,10 @@ export const ROLES = [
 ];
 
 export const QUESTIONS = [
-  { q: 'Do we need to install an app?', a: 'No. KinKeep works in any browser, on a phone or a computer, and reminders arrive by email.' },
+  {
+    q: 'Do we need to install an app?',
+    a: 'No. KinKeep works in any browser, on a phone or a computer, and reminders arrive by email.',
+  },
   {
     q: 'What if the elder does not use email?',
     a: 'Their reminders can go to a caregiver they choose. The elder still has their own passcode and the final say.',

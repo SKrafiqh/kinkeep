@@ -2,7 +2,7 @@ import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin
 import { getFirestore, type Firestore, type Query as FirestoreQuery } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import type { Config } from '../config';
-import type { DocStore, Found, Query } from './store';
+import type { DocStore, Found, Query, Transaction } from './store';
 
 const GRPC_ALREADY_EXISTS = 6;
 
@@ -39,6 +39,17 @@ function applyQuery(base: FirestoreQuery, query: Query = {}): FirestoreQuery {
   return query.limit === undefined ? result : result.limit(query.limit);
 }
 
+function runTransaction<T>(db: Firestore, run: (tx: Transaction) => Promise<T>): Promise<T> {
+  return db.runTransaction((tx) =>
+    run({
+      get: async <D>(path: string) => ((await tx.get(db.doc(path))).data() as D | undefined) ?? null,
+      set: (path, data) => void tx.set(db.doc(path), data),
+      update: (path, patch) => void tx.update(db.doc(path), patch),
+      delete: (path) => void tx.delete(db.doc(path)),
+    }),
+  );
+}
+
 /** DocStore over Firestore through the Admin SDK. Clients never reach the database directly. */
 export function createFirestoreStore(config: Config): DocStore {
   const db = connect(config);
@@ -70,14 +81,6 @@ export function createFirestoreStore(config: Config): DocStore {
       const snapshot = await applyQuery(db.collectionGroup(collectionId), query).get();
       return snapshot.docs.map((doc): Found<T> => ({ path: doc.ref.path, data: doc.data() as T }));
     },
-    transaction: (run) =>
-      db.runTransaction((tx) =>
-        run({
-          get: async <T>(path: string) => ((await tx.get(db.doc(path))).data() as T | undefined) ?? null,
-          set: (path, data) => void tx.set(db.doc(path), data),
-          update: (path, patch) => void tx.update(db.doc(path), patch),
-          delete: (path) => void tx.delete(db.doc(path)),
-        }),
-      ),
+    transaction: (run) => runTransaction(db, run),
   };
 }

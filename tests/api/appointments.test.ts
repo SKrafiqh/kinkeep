@@ -10,7 +10,14 @@ import { HOUR_MS, MINUTE_MS } from '@/lib/constants';
 import { paths } from '@/server/repos/paths';
 import { call, createCircle, createWorld, type World } from './helpers';
 
-const APPOINTMENT = { doctor: 'Dr Mehta', speciality: 'Cardiology', place: 'City Clinic', date: '2026-11-19', time: '10:30', notes: 'Bring reports' };
+const APPOINTMENT = {
+  doctor: 'Dr Mehta',
+  speciality: 'Cardiology',
+  place: 'City Clinic',
+  date: '2026-11-19',
+  time: '10:30',
+  notes: 'Bring reports',
+};
 /** 19 Nov 2026 10:30 in Asia/Kolkata (UTC+5:30). */
 const APPOINTMENT_AT = Date.UTC(2026, 10, 19, 5, 0);
 
@@ -28,16 +35,25 @@ beforeEach(async () => {
 });
 
 const add = (body: unknown = APPOINTMENT, as: string = cookie) => call(addAppointmentRoute, { cookie: as, body });
-const patch = (id: string, body: unknown, as: string = cookie) => call(patchAppointmentRoute, { method: 'PATCH', cookie: as, params: { id }, body });
-const remove = (id: string, as: string = cookie) => call(deleteAppointmentRoute, { method: 'DELETE', cookie: as, params: { id } });
-const feed = async (): Promise<string[]> => (await call(activityRoute, { cookie })).data.map((a: { summary: string }) => a.summary);
+const patch = (id: string, body: unknown, as: string = cookie) =>
+  call(patchAppointmentRoute, { method: 'PATCH', cookie: as, params: { id }, body });
+const remove = (id: string, as: string = cookie) =>
+  call(deleteAppointmentRoute, { method: 'DELETE', cookie: as, params: { id } });
+const feed = async (): Promise<string[]> =>
+  (await call(activityRoute, { cookie })).data.map((a: { summary: string }) => a.summary);
 
 async function familyCookie(): Promise<string> {
-  const added = await call(addMemberRoute, { cookie, body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' } });
+  const added = await call(addMemberRoute, {
+    cookie,
+    body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' },
+  });
   const found = await call(lookupRoute, { query: `?code=${code}` });
   const memberId = found.data.members.find((m: { name: string }) => m.name === 'Arjun').id;
   const first = await call(signInRoute, { body: { code, memberId, passcode: added.data.setupPasscode } });
-  const changed = await call(passcodeRoute, { cookie: first.cookie, body: { current: added.data.setupPasscode, passcode: '135790' } });
+  const changed = await call(passcodeRoute, {
+    cookie: first.cookie,
+    body: { current: added.data.setupPasscode, passcode: '135790' },
+  });
   return changed.cookie ?? (first.cookie as string);
 }
 
@@ -94,7 +110,9 @@ describe('authorisation and missing appointments', () => {
     const { data } = await add();
     expect((await call(listAppointmentsRoute, {})).status).toBe(401);
     expect((await call(addAppointmentRoute, { body: APPOINTMENT })).status).toBe(401);
-    expect((await call(patchAppointmentRoute, { method: 'PATCH', params: { id: data.id }, body: APPOINTMENT })).status).toBe(401);
+    expect(
+      (await call(patchAppointmentRoute, { method: 'PATCH', params: { id: data.id }, body: APPOINTMENT })).status,
+    ).toBe(401);
     expect((await call(deleteAppointmentRoute, { method: 'DELETE', params: { id: data.id } })).status).toBe(401);
   });
 
@@ -116,7 +134,10 @@ describe('authorisation and missing appointments', () => {
 describe('editing and deleting', () => {
   it('moving the time resets the reminders', async () => {
     const { data } = await add();
-    await world.deps.store.update(paths.appointment(circleId, data.id), { remindersSent: { h24: true, h2: true }, nextReminderAt: null });
+    await world.deps.store.update(paths.appointment(circleId, data.id), {
+      remindersSent: { h24: true, h2: true },
+      nextReminderAt: null,
+    });
     const moved = await patch(data.id, { ...APPOINTMENT, date: '2026-11-20' });
     expect(moved.data).toMatchObject({
       at: APPOINTMENT_AT + 24 * HOUR_MS,
@@ -127,9 +148,16 @@ describe('editing and deleting', () => {
 
   it('keeps the reminder state when only the notes change', async () => {
     const { data } = await add();
-    await world.deps.store.update(paths.appointment(circleId, data.id), { remindersSent: { h24: true, h2: false }, nextReminderAt: APPOINTMENT_AT - 2 * HOUR_MS });
+    await world.deps.store.update(paths.appointment(circleId, data.id), {
+      remindersSent: { h24: true, h2: false },
+      nextReminderAt: APPOINTMENT_AT - 2 * HOUR_MS,
+    });
     const edited = await patch(data.id, { ...APPOINTMENT, notes: 'Ask about dizziness' });
-    expect(edited.data).toMatchObject({ notes: 'Ask about dizziness', remindersSent: { h24: true, h2: false }, nextReminderAt: APPOINTMENT_AT - 2 * HOUR_MS });
+    expect(edited.data).toMatchObject({
+      notes: 'Ask about dizziness',
+      remindersSent: { h24: true, h2: false },
+      nextReminderAt: APPOINTMENT_AT - 2 * HOUR_MS,
+    });
   });
 
   it('deletes the appointment', async () => {

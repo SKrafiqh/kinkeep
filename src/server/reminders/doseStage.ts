@@ -1,6 +1,6 @@
 import { advanceDose } from '@/domain/escalation';
 import { formatTime } from '@/domain/time';
-import type { Circle, DoseEvent, DoseStatus, Member } from '@/domain/types';
+import type { Circle, DoseEvent, DoseStatus } from '@/domain/types';
 import { MAX_SEND_ATTEMPTS, MINUTE_MS, SEND_RETRY_MINUTES } from '@/lib/constants';
 import { errorFields, log } from '@/lib/logger';
 import { issueActionToken } from '../auth/actionToken';
@@ -9,6 +9,7 @@ import type { EmailMessage } from '../email/sender';
 import { missedEmail, nudgeEmail, upcomingEmail } from '../email/templates';
 import { paths } from '../repos/paths';
 import { alertRecipients, elderRecipient, whose } from '../services/recipients';
+import type { CircleContext } from './context';
 
 interface Claimed {
   event: DoseEvent;
@@ -34,11 +35,21 @@ function claimSlot(deps: Deps, circle: Circle, doseIds: string[], now: number): 
   });
 }
 
-function messagesFor(deps: Deps, circle: Circle, members: Member[], stage: DoseStatus, doses: DoseEvent[]): EmailMessage[] {
+function messagesFor(
+  deps: Deps,
+  { circle, members }: CircleContext,
+  stage: DoseStatus,
+  doses: DoseEvent[],
+): EmailMessage[] {
   const slotTime = formatTime(doses[0].dueAt, circle.timeZone);
   const medicines = doses.map((dose) => ({ name: dose.medName, strength: dose.strength }));
   if (stage === 'missed') {
-    const content = missedEmail({ elderName: circle.elderName, slotTime, medicines, circleUrl: `${deps.config.APP_URL}/circle` });
+    const content = missedEmail({
+      elderName: circle.elderName,
+      slotTime,
+      medicines,
+      circleUrl: `${deps.config.APP_URL}/circle`,
+    });
     return alertRecipients(members, 'missedDose').map((member) => ({ to: member.email, ...content }));
   }
   const recipient = elderRecipient(circle, members);
@@ -63,7 +74,12 @@ function errorCode(error: unknown): string {
 }
 
 // Retried only when nothing went out, so nobody ever gets the same stage twice.
-function recordFailure(deps: Deps, circle: Circle, claimed: Claimed[], error: unknown, now: number): Promise<void> {
+function recordFailure(
+  deps: Deps,
+  circle: Circle,
+  claimed: Claimed[],
+  { error, now }: { error: unknown; now: number },
+): Promise<void> {
   const lastError = errorCode(error);
   return deps.store.transaction(async (tx) => {
     const fresh = await Promise.all(claimed.map(({ event }) => tx.get<DoseEvent>(paths.dose(circle.id, event.id))));
@@ -78,21 +94,28 @@ function recordFailure(deps: Deps, circle: Circle, claimed: Claimed[], error: un
 }
 
 /** Advances one slot and sends one email per recipient for each stage reached. Returns emails sent. */
-export async function processSlot(deps: Deps, circle: Circle, members: Member[], doseIds: string[], now: number): Promise<number> {
+export async function processSlot(deps: Deps, context: CircleContext, doseIds: string[], now: number): Promise<number> {
+  const { circle } = context;
   const claimed = await claimSlot(deps, circle, doseIds, now);
   let sent = 0;
   for (const stage of ['reminded', 'nudged', 'missed'] as const) {
     const group = claimed.filter(({ event }) => event.status === stage);
     if (group.length === 0) continue;
-    const messages = messagesFor(deps, circle, members, stage, group.map(({ event }) => event));
+    const messages = messagesFor(
+      deps,
+      context,
+      stage,
+      group.map(({ event }) => event),
+    );
     if (messages.length === 0) {
       log.info('tick.no_recipient', { circleId: circle.id, stage });
       continue;
     }
     const result = await sendAll(deps, messages);
     sent += result.sent;
-    if (result.error !== undefined) log.warn('tick.send_failed', { circleId: circle.id, stage, sent: result.sent, ...errorFields(result.error) });
-    if (result.sent === 0) await recordFailure(deps, circle, group, result.error, now);
+    if (result.error !== undefined)
+      log.warn('tick.send_failed', { circleId: circle.id, stage, sent: result.sent, ...errorFields(result.error) });
+    if (result.sent === 0) await recordFailure(deps, circle, group, { error: result.error, now });
     else await clearFailures(deps, circle, group);
   }
   return sent;
@@ -101,5 +124,9 @@ export async function processSlot(deps: Deps, circle: Circle, members: Member[],
 // The three-attempt limit is per stage: once a stage is sent, the next one starts from zero.
 async function clearFailures(deps: Deps, circle: Circle, claimed: Claimed[]): Promise<void> {
   const failedBefore = claimed.filter(({ event }) => event.attempts > 0);
-  await Promise.all(failedBefore.map(({ event }) => deps.store.update(paths.dose(circle.id, event.id), { attempts: 0, lastError: null })));
+  await Promise.all(
+    failedBefore.map(({ event }) =>
+      deps.store.update(paths.dose(circle.id, event.id), { attempts: 0, lastError: null }),
+    ),
+  );
 }

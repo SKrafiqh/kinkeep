@@ -1,10 +1,11 @@
-import type { Circle, Member } from '@/domain/types';
+import type { Circle } from '@/domain/types';
 import { HOUR_MS, MATERIALISE_HOURS, MATERIALISE_REFILL_HOURS, TICK_BUDGET_MS, TICK_PAGE_SIZE } from '@/lib/constants';
 import { errorFields, log } from '@/lib/logger';
 import type { Deps } from '../deps';
 import { paths } from '../repos/paths';
 import { circlesDueSummary, dueAppointments, dueDoses, listMembers, medicationsToTopUp } from '../repos/queries';
 import { processAppointment } from './appointmentStage';
+import type { CircleContext } from './context';
 import { processSlot } from './doseStage';
 import { materialiseMedication } from './materialise';
 import { processWeeklySummary } from './weeklySummary';
@@ -16,11 +17,6 @@ export interface TickResult {
   summaryEmails: number;
   /** False when the time budget ran out; the next tick carries on. */
   complete: boolean;
-}
-
-interface CircleContext {
-  circle: Circle;
-  members: Member[];
 }
 
 // Each circle is read at most once per tick, however many of its doses are due.
@@ -37,7 +33,9 @@ function circleLoader(deps: Deps): (circleId: string) => Promise<CircleContext |
   };
 }
 
-function bySlot<T extends { circleId: string; item: { id: string; slotKey: string } }>(due: T[]): Array<{ circleId: string; doseIds: string[] }> {
+function bySlot<T extends { circleId: string; item: { id: string; slotKey: string } }>(
+  due: T[],
+): Array<{ circleId: string; doseIds: string[] }> {
   const slots = new Map<string, { circleId: string; doseIds: string[] }>();
   for (const { circleId, item } of due) {
     const slot = slots.get(item.slotKey) ?? { circleId, doseIds: [] };
@@ -62,23 +60,43 @@ export async function runTick(deps: Deps): Promise<TickResult> {
 
   const horizon = now + (MATERIALISE_HOURS - MATERIALISE_REFILL_HOURS) * HOUR_MS;
   const steps = [
-    await eachDue('materialise', await medicationsToTopUp(deps.store, horizon, TICK_PAGE_SIZE), outOfTime, ({ circleId, item }) =>
-      inCircle(circleId, ({ circle }) => materialiseMedication(deps, circle, item, now)),
+    await eachDue(
+      'materialise',
+      await medicationsToTopUp(deps.store, horizon, TICK_PAGE_SIZE),
+      outOfTime,
+      ({ circleId, item }) => inCircle(circleId, ({ circle }) => materialiseMedication(deps, circle, item, now)),
     ),
-    await eachDue('doses', bySlot(await dueDoses(deps.store, now, TICK_PAGE_SIZE)), outOfTime, ({ circleId, doseIds }) =>
-      inCircle(circleId, ({ circle, members }) => processSlot(deps, circle, members, doseIds, now)),
+    await eachDue(
+      'doses',
+      bySlot(await dueDoses(deps.store, now, TICK_PAGE_SIZE)),
+      outOfTime,
+      ({ circleId, doseIds }) => inCircle(circleId, (context) => processSlot(deps, context, doseIds, now)),
     ),
-    await eachDue('appointments', await dueAppointments(deps.store, now, TICK_PAGE_SIZE), outOfTime, ({ circleId, item }) =>
-      inCircle(circleId, ({ circle, members }) => processAppointment(deps, circle, members, item.id, now)),
+    await eachDue(
+      'appointments',
+      await dueAppointments(deps.store, now, TICK_PAGE_SIZE),
+      outOfTime,
+      ({ circleId, item }) => inCircle(circleId, (context) => processAppointment(deps, context, item.id, now)),
     ),
     await eachDue('summaries', await circlesDueSummary(deps.store, now, TICK_PAGE_SIZE), outOfTime, (circle) =>
       inCircle(circle.id, ({ members }) => processWeeklySummary(deps, circle.id, members, now)),
     ),
   ];
-  const [materialised, doseEmails, appointmentEmails, summaryEmails] = steps.map((step) => step.count);
-  const result: TickResult = { materialised, doseEmails, appointmentEmails, summaryEmails, complete: steps.every((step) => step.complete) };
+  const result = toTickResult(steps);
   log.info('tick.done', { ...result });
   return result;
+}
+
+/** Folds the four stage outcomes, in run order, into the tick's result. */
+function toTickResult(steps: Array<{ count: number; complete: boolean }>): TickResult {
+  const [materialised, doseEmails, appointmentEmails, summaryEmails] = steps.map((step) => step.count);
+  return {
+    materialised,
+    doseEmails,
+    appointmentEmails,
+    summaryEmails,
+    complete: steps.every((step) => step.complete),
+  };
 }
 
 // One failing item is logged and skipped, so it can never stop the reminders behind it.

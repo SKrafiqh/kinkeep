@@ -1,0 +1,67 @@
+@layer base {
+  html {
+    font-size: 112.5%; /* 18px body */
+  }
+
+  body {
+    position: relative;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+  }
+
+  /* Morning light: a pale sky at the top fading to paper, a low sun, and a little grain so it never looks flat. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .09 0 0 0 0 .15 0 0 0 0 .18 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"),
+      radial-gradient(60rem 36rem at 92% -6%, rgb(246 205 140 / 0.55), transparent 62%),
+      radial-gradient(48rem 34rem at -8% 8%, rgb(15 92 92 / 0.16), transparent 66%),
+      linear-gradient(180deg, var(--color-sky) 0%, var(--color-paper) 46%, var(--color-wash) 100%);
+    opacity: 1;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--fs-h1);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: var(--fs-h2);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  h3 {
+    font-size: var(--fs-body);
+    font-weight: 700;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+}

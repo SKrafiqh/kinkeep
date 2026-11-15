@@ -5,8 +5,8 @@ import { changePasscode } from '@/server/services/sessions';
 
 export const POST = memberRoute(
   { body: changePasscodeSchema, permission: 'circle:view', allowPendingPasscode: true },
-  async ({ deps, body, circle, member, expiresAt }) => {
-    await changePasscode(deps, { circle, member, expiresAt }, body);
-    return { home: homePath(member.role) };
+  async ({ deps, body, who }) => {
+    await changePasscode(deps, who, body);
+    return { home: homePath(who.member.role) };
   },
 );

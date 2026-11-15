@@ -5,15 +5,13 @@ import { isValidTimeZone } from '@/domain/time';
 import { MEDICINE_FORMS, PASSCODE_LENGTH } from './constants';
 
 const text = (min: number, max: number, label: string) =>
-  z
-    .string()
-    .trim()
-    .min(min, `Enter ${label}.`)
-    .max(max, `Keep ${label} under ${max} characters.`);
+  z.string().trim().min(min, `Enter ${label}.`).max(max, `Keep ${label} under ${max} characters.`);
 
 const unique = (values: Array<string | number>): boolean => new Set(values).size === values.length;
 
-export const passcodeSchema = z.string().regex(new RegExp(`^\\d{${PASSCODE_LENGTH}}$`), `Use exactly ${PASSCODE_LENGTH} digits.`);
+export const passcodeSchema = z
+  .string()
+  .regex(new RegExp(`^\\d{${PASSCODE_LENGTH}}$`), `Use exactly ${PASSCODE_LENGTH} digits.`);
 export const emailSchema = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address.').max(254));
 export const circleCodeSchema = z
   .string()
@@ -90,7 +88,9 @@ export const appointmentSchema = z.strictObject({
 const doseActionField = z.enum(['taken', 'skipped']);
 /** `slot: true` marks every dose due at the same time, the way the Today view's one button does. */
 export const doseActionSchema = z.strictObject({ action: doseActionField, slot: z.boolean().default(false) });
-export const demoSchema = z.strictObject({ timeZone: z.string().refine(isValidTimeZone, 'Choose a time zone from the list.') });
+export const demoSchema = z.strictObject({
+  timeZone: z.string().refine(isValidTimeZone, 'Choose a time zone from the list.'),
+});
 export const actSchema = z.strictObject({ token: z.string().min(20).max(1200), action: doseActionField });
 export const dayQuerySchema = z.strictObject({ date: dateSchema.optional() });
 export const testReminderSchema = z.strictObject({ email: emailSchema });

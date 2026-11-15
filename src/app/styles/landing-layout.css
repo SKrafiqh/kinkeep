@@ -1,0 +1,121 @@
+@layer components {
+  /* ---------- Landing layout, after the canopy template ---------- */
+
+  .wrap {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 48px);
+  }
+
+  /* A floating glass pill that stays at the top while the page scrolls. */
+  .nav-pill {
+    position: sticky;
+    top: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px 6px 18px;
+    border-radius: 999px;
+  }
+
+  .nav-links {
+    display: none;
+    margin-inline: auto;
+    gap: 2px;
+  }
+
+  @media (min-width: 64em) {
+    .nav-links {
+      display: flex;
+    }
+  }
+
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: background-color 0.2s;
+  }
+
+  .nav-links a:hover {
+    background: rgb(15 92 92 / 0.1);
+  }
+
+  /*
+   * The canopy window: looking up through leaves into a morning sky. The sky stays pale so
+   * ink text on it keeps 7:1, and a soft glow sits behind the words.
+   */
+  .sky-window {
+    position: relative;
+    overflow: hidden;
+    border-radius: clamp(28px, 4vw, 44px);
+    background:
+      radial-gradient(70% 60% at 50% 46%, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0) 70%),
+      radial-gradient(40% 40% at 80% 18%, rgb(246 205 140 / 0.7), transparent 70%),
+      linear-gradient(180deg, #bcd8e6 0%, #dcebe6 55%, #f4efe4 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 40px 80px -40px rgb(15 70 70 / 0.45);
+  }
+
+  .sky-window > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* On a narrow screen the crop pulls leaves behind the words, so the sky stays clear there. */
+  @media (max-width: 40em) {
+    .sky-window > svg {
+      display: none;
+    }
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+
+  .kicker b {
+    font-family: var(--font-display);
+    font-size: 1.15em;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .statement {
+    font-family: var(--font-display);
+    font-size: clamp(1.7rem, 1.2rem + 2.4vw, 3.4rem);
+    font-weight: 500;
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+    max-width: 22em;
+    text-wrap: balance;
+  }
+
+  /* A figure over a thin rule, like the template's counters. Every figure is a product fact. */
+  .fact {
+    display: grid;
+    gap: 6px;
+    padding-top: 20px;
+    border-top: 2px solid rgb(22 38 46 / 0.18);
+  }
+
+  .fact dd {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 1.8rem + 2.2vw, 3.8rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+}

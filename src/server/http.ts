@@ -19,6 +19,9 @@ export interface RouteContext<Body> {
   now: number;
 }
 
+/** A member route's context: the signed-in member, also bundled as `who` for the services. */
+export type MemberRouteContext<Body> = RouteContext<Body> & MemberContext & { who: MemberContext };
+
 interface RouteOptions<Body> {
   /** Schema for the JSON body. Unknown fields are rejected by the schemas themselves. */
   body?: z.ZodType<Body>;
@@ -45,7 +48,10 @@ function failure(error: unknown): Response {
   const body = known
     ? { code: known.code, message: known.message, ...(known.fields ? { fields: known.fields } : {}) }
     : { code: 'INTERNAL', message: 'Something went wrong on our side. Please try again.' };
-  return Response.json({ ok: false, error: body }, { status: known?.status ?? 500, headers: { 'Cache-Control': 'no-store' } });
+  return Response.json(
+    { ok: false, error: body },
+    { status: known?.status ?? 500, headers: { 'Cache-Control': 'no-store' } },
+  );
 }
 
 /** First message per field, keyed by field name, for showing next to inputs. */
@@ -58,7 +64,8 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
 /** Validates data against a schema or throws a VALIDATION error with per-field messages. */
 export function parse<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
-  if (!result.success) throw new AppError('VALIDATION', 'Please check the highlighted fields.', fieldErrors(result.error));
+  if (!result.success)
+    throw new AppError('VALIDATION', 'Please check the highlighted fields.', fieldErrors(result.error));
   return result.data;
 }
 
@@ -67,7 +74,8 @@ function assertSameOrigin(request: Request, config: Config): void {
   if (request.method === 'GET' || request.method === 'HEAD') return;
   const origin = request.headers.get('origin');
   const sameHost = origin !== null && URL.canParse(origin) && new URL(origin).host === request.headers.get('host');
-  if (origin !== config.APP_URL && !sameHost) throw new AppError('FORBIDDEN', 'This request did not come from the app.');
+  if (origin !== config.APP_URL && !sameHost)
+    throw new AppError('FORBIDDEN', 'This request did not come from the app.');
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
@@ -76,7 +84,10 @@ const ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
 // brief shares one bucket and a caller cannot mint fresh buckets by varying the id.
 function limitKey(request: Request, params: Params): string {
   const ids = Object.values(params);
-  const route = new URL(request.url).pathname.split('/').map((segment) => (ids.includes(segment) ? ':id' : segment)).join('/');
+  const route = new URL(request.url).pathname
+    .split('/')
+    .map((segment) => (ids.includes(segment) ? ':id' : segment))
+    .join('/');
   return `${request.method} ${route} ${clientIp(request)}`;
 }
 
@@ -87,7 +98,10 @@ async function readBody<Body>(request: Request, schema: z.ZodType<Body>): Promis
   return parse(schema, json);
 }
 
-function createRoute<Body>(options: RouteOptions<Body>, handle: (context: RouteContext<Body>) => Promise<unknown>): RouteHandler {
+function createRoute<Body>(
+  options: RouteOptions<Body>,
+  handle: (context: RouteContext<Body>) => Promise<unknown>,
+): RouteHandler {
   return async (request, context) => {
     try {
       const deps = getDeps();
@@ -95,7 +109,8 @@ function createRoute<Body>(options: RouteOptions<Body>, handle: (context: RouteC
       if (!options.skipOriginCheck) assertSameOrigin(request, deps.config);
       // Next.js passes no params object at all to a route without dynamic segments.
       const params = (await context.params) ?? {};
-      if (Object.values(params).some((value) => !ID_PATTERN.test(value))) throw new AppError('NOT_FOUND', 'We could not find that.');
+      if (Object.values(params).some((value) => !ID_PATTERN.test(value)))
+        throw new AppError('NOT_FOUND', 'We could not find that.');
       if (options.rateLimit && !allowRequest(limitKey(request, params), options.rateLimit, now)) {
         throw new AppError('RATE_LIMITED', 'That was a lot of tries. Please wait a minute and try again.');
       }
@@ -109,14 +124,17 @@ function createRoute<Body>(options: RouteOptions<Body>, handle: (context: RouteC
 }
 
 /** A route anyone may call. Give every one a rate limit. */
-export function publicRoute<Body = undefined>(options: RouteOptions<Body>, handle: (context: RouteContext<Body>) => Promise<unknown>): RouteHandler {
+export function publicRoute<Body = undefined>(
+  options: RouteOptions<Body>,
+  handle: (context: RouteContext<Body>) => Promise<unknown>,
+): RouteHandler {
   return createRoute(options, handle);
 }
 
 /** A route for signed-in members. Membership and role are re-read from the database on every call. */
 export function memberRoute<Body = undefined>(
   options: MemberRouteOptions<Body>,
-  handle: (context: RouteContext<Body> & MemberContext) => Promise<unknown>,
+  handle: (context: MemberRouteContext<Body>) => Promise<unknown>,
 ): RouteHandler {
   return createRoute(options, async (context) => {
     const token = sessionTokenFrom(context.request.headers.get('cookie'));
@@ -126,8 +144,11 @@ export function memberRoute<Body = undefined>(
       throw new AppError('PASSCODE_CHANGE_REQUIRED', 'Choose your own passcode before you continue.');
     }
     if (!can(who.member.role, options.permission)) {
-      throw new AppError('FORBIDDEN', `Your role cannot do that. Ask ${who.circle.elderName} if you need this changed.`);
+      throw new AppError(
+        'FORBIDDEN',
+        `Your role cannot do that. Ask ${who.circle.elderName} if you need this changed.`,
+      );
     }
-    return handle({ ...context, ...who });
+    return handle({ ...context, ...who, who });
   });
 }

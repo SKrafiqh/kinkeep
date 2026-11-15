@@ -24,7 +24,8 @@ export function escapeHtml(value: string): string {
 }
 
 const FOOTER = `You are getting this because you are part of a ${APP_NAME} care circle.`;
-const BODY = 'margin:0;padding:24px;background:#FBF7F0;color:#16262E;font-family:Verdana,Arial,sans-serif;font-size:18px;line-height:1.6';
+const BODY =
+  'margin:0;padding:24px;background:#FBF7F0;color:#16262E;font-family:Verdana,Arial,sans-serif;font-size:18px;line-height:1.6';
 const BUTTON =
   'display:inline-block;background:#0F5C5C;color:#FFFFFF;padding:16px 28px;border-radius:12px;font-size:20px;font-weight:700;text-decoration:none';
 

@@ -33,7 +33,12 @@ export function ConfirmDialog({ open, title, children, confirmLabel, danger, pen
       <h2 id={titleId}>{title}</h2>
       <div className="mt-3">{children}</div>
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="button" className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} disabled={pending} onClick={onConfirm}>
+        <button
+          type="button"
+          className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
+          disabled={pending}
+          onClick={onConfirm}
+        >
           {pending ? 'Working…' : confirmLabel}
         </button>
         <button type="button" className="btn btn-quiet" onClick={onCancel}>

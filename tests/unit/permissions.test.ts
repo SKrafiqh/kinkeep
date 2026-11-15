@@ -3,9 +3,27 @@ import { can, homePath, PERMISSIONS, ROLES } from '@/domain/permissions';
 
 // The full matrix, written out so any change to the table has to be made twice on purpose.
 const EXPECTED = {
-  elder: { 'circle:view': true, 'dose:act': true, 'medication:write': true, 'appointment:write': true, 'members:manage': true },
-  caregiver: { 'circle:view': true, 'dose:act': true, 'medication:write': true, 'appointment:write': true, 'members:manage': false },
-  family: { 'circle:view': true, 'dose:act': false, 'medication:write': false, 'appointment:write': false, 'members:manage': false },
+  elder: {
+    'circle:view': true,
+    'dose:act': true,
+    'medication:write': true,
+    'appointment:write': true,
+    'members:manage': true,
+  },
+  caregiver: {
+    'circle:view': true,
+    'dose:act': true,
+    'medication:write': true,
+    'appointment:write': true,
+    'members:manage': false,
+  },
+  family: {
+    'circle:view': true,
+    'dose:act': false,
+    'medication:write': false,
+    'appointment:write': false,
+    'members:manage': false,
+  },
 } as const;
 
 describe('permissions', () => {

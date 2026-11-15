@@ -13,7 +13,9 @@ export function elderRecipient(circle: Circle, members: Member[]): WithEmail | n
 
 /** Members the elder switched this alert on for. The elder is never in this list. */
 export function alertRecipients(members: Member[], alert: keyof AlertSettings): WithEmail[] {
-  return members.filter((member): member is WithEmail => member.role !== 'elder' && member.alerts[alert] && hasEmail(member));
+  return members.filter(
+    (member): member is WithEmail => member.role !== 'elder' && member.alerts[alert] && hasEmail(member),
+  );
 }
 
 /** One entry per address, first wins. */

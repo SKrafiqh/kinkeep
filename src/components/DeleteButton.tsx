@@ -38,7 +38,15 @@ export function DeleteButton({ path, label, title, consequence, done, redirectTo
         {label}
       </button>
       <FormError error={error} />
-      <ConfirmDialog open={open} title={title} confirmLabel={label} danger pending={pending} onConfirm={confirm} onCancel={() => setOpen(false)}>
+      <ConfirmDialog
+        open={open}
+        title={title}
+        confirmLabel={label}
+        danger
+        pending={pending}
+        onConfirm={confirm}
+        onCancel={() => setOpen(false)}
+      >
         <p>{consequence}</p>
       </ConfirmDialog>
     </div>

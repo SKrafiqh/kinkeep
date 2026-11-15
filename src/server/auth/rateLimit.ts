@@ -10,6 +10,8 @@ export interface RateLimit {
 }
 
 const MAX_BUCKETS = 10_000;
+/** Eviction trims to this share of the cap, so it does not run again on the very next caller. */
+const EVICT_TO_SHARE = 0.9;
 const buckets = new Map<string, Bucket>();
 
 /**
@@ -27,7 +29,7 @@ export function allowRequest(key: string, rule: RateLimit, now: number): boolean
   if (buckets.size > MAX_BUCKETS) {
     for (const oldest of buckets.keys()) {
       buckets.delete(oldest);
-      if (buckets.size <= MAX_BUCKETS * 0.9) break;
+      if (buckets.size <= MAX_BUCKETS * EVICT_TO_SHARE) break;
     }
   }
   return allowed;

@@ -1,0 +1,17 @@
+/* Type scale. The Today view swaps these for its larger set. */
+:root {
+  --fs-body: 1rem;
+  --fs-label: 0.889rem;
+  --fs-h2: 1.333rem;
+  --fs-h1: 1.778rem;
+  --target: 48px;
+}
+
+.today {
+  --fs-body: 1.222rem;
+  --fs-label: 1.111rem;
+  --fs-h2: 1.667rem;
+  --fs-h1: 2.222rem;
+  --target: 56px;
+  font-size: var(--fs-body);
+}

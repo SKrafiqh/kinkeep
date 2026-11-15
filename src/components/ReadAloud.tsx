@@ -36,7 +36,11 @@ export function ReadAloud({ text }: { text: string }) {
 
   return (
     <button type="button" className="btn btn-secondary no-print" onClick={toggle}>
-      {speaking ? <StopIcon aria-hidden weight="bold" size={24} /> : <SpeakerHighIcon aria-hidden weight="bold" size={24} />}
+      {speaking ? (
+        <StopIcon aria-hidden weight="bold" size={24} />
+      ) : (
+        <SpeakerHighIcon aria-hidden weight="bold" size={24} />
+      )}
       {speaking ? 'Stop reading' : 'Read my day aloud'}
     </button>
   );

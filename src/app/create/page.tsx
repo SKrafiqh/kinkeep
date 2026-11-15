@@ -10,7 +10,8 @@ export default function CreatePage() {
       <div className="grid gap-6">
         <h1>Create a care circle</h1>
         <p>
-          A circle is for one person receiving care. If you are setting it up for them, they still get their own passcode and the final say.
+          A circle is for one person receiving care. If you are setting it up for them, they still get their own
+          passcode and the final say.
         </p>
         <CreateCircleForm timeZones={Intl.supportedValuesOf('timeZone')} />
         <p>

@@ -7,6 +7,22 @@ export const REMINDER_DEFAULTS = { leadMin: 15, nudgeMin: 30, escalateMin: 60 } 
 export const MINUTE_MS = 60_000;
 export const HOUR_MS = 60 * MINUTE_MS;
 export const DAY_MS = 24 * HOUR_MS;
+export const WEEK_MS = 7 * DAY_MS;
+
+const RATE_WINDOW_MS = 10 * MINUTE_MS;
+
+/** Requests one address may make to each public or costly route per ten minutes. */
+export const RATE_LIMITS = {
+  /** One-tap links from email. */
+  emailAction: { limit: 30, windowMs: RATE_WINDOW_MS },
+  /** AI visit briefs. */
+  brief: { limit: 10, windowMs: RATE_WINDOW_MS },
+  demo: { limit: 3, windowMs: RATE_WINDOW_MS },
+  circleLookup: { limit: 20, windowMs: RATE_WINDOW_MS },
+  createCircle: { limit: 5, windowMs: RATE_WINDOW_MS },
+  signIn: { limit: 20, windowMs: RATE_WINDOW_MS },
+  testReminder: { limit: 3, windowMs: RATE_WINDOW_MS },
+} as const;
 
 export const SESSION_HOURS = 12;
 export const SESSION_WARNING_MINUTES = 5;
@@ -42,8 +58,7 @@ export const WEEKLY_SUMMARY_TIME = '18:00';
 
 export const AI_DISCLAIMER =
   'Prepared by AI from your records. Not medical advice. Check with your doctor or pharmacist.';
-export const BRIEF_DISCLAIMER =
-  'Prepared from your records. Not medical advice. Check with your doctor or pharmacist.';
+export const BRIEF_DISCLAIMER = 'Prepared from your records. Not medical advice. Check with your doctor or pharmacist.';
 
 export const ROLE_LABELS = { elder: 'Elder', caregiver: 'Caregiver', family: 'Family' } as const;
 export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;

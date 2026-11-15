@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import type { BriefContent, VisitBrief } from '@/domain/types';
 import { AI_DISCLAIMER, BRIEF_DISCLAIMER } from '@/lib/constants';
 import { Field, FormError } from './Field';
 import { PrinterIcon } from './icons';
-import { useAction, useFocusFirstError } from './useAction';
+import { useAction, useFocusFirstError, type ApiFailure } from './useAction';
 
 const LISTS: Array<{ key: 'patterns' | 'changes' | 'questions'; title: string }> = [
   { key: 'patterns', title: 'Missed-dose patterns' },
@@ -13,7 +13,11 @@ const LISTS: Array<{ key: 'patterns' | 'changes' | 'questions'; title: string }>
   { key: 'questions', title: 'Questions to ask the doctor or pharmacist' },
 ];
 
-const toLines = (text: string): string[] => text.split('\n').map((line) => line.trim()).filter((line) => line !== '');
+const toLines = (text: string): string[] =>
+  text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
 
 function BriefView({ brief }: { brief: VisitBrief }) {
   return (
@@ -37,14 +41,101 @@ function BriefView({ brief }: { brief: VisitBrief }) {
   );
 }
 
+function toContent(data: FormData): BriefContent {
+  return {
+    summary: String(data.get('summary') ?? ''),
+    patterns: toLines(String(data.get('patterns') ?? '')),
+    changes: toLines(String(data.get('changes') ?? '')),
+    questions: toLines(String(data.get('questions') ?? '')),
+  };
+}
+
+interface EditProps {
+  formRef: RefObject<HTMLFormElement | null>;
+  brief: VisitBrief;
+  error: ApiFailure | null;
+  pending: boolean;
+  onSave: (event: FormEvent<HTMLFormElement>) => void;
+  onDiscard: () => void;
+}
+
+function BriefEditForm({ formRef, brief, error, pending, onSave, onDiscard }: EditProps) {
+  return (
+    <form ref={formRef} onSubmit={onSave} noValidate className="grid gap-6">
+      <Field
+        name="summary"
+        label="Summary"
+        as="textarea"
+        defaultValue={brief.content.summary}
+        error={error?.fields?.summary}
+      />
+      {LISTS.map(({ key, title }) => (
+        <Field
+          key={key}
+          name={key}
+          label={title}
+          hint="One per line."
+          as="textarea"
+          defaultValue={brief.content[key].join('\n')}
+          error={error?.fields?.[key]}
+        />
+      ))}
+      <FormError error={error} />
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className="btn btn-primary" disabled={pending}>
+          {pending ? 'Saving…' : 'Save changes'}
+        </button>
+        <button type="button" className="btn btn-quiet" onClick={onDiscard}>
+          Discard changes
+        </button>
+      </div>
+    </form>
+  );
+}
+
+interface ActionsProps {
+  hasBrief: boolean;
+  canEdit: boolean;
+  pending: boolean;
+  onPrepare: () => void;
+  onEdit: () => void;
+}
+
+function BriefActions({ hasBrief, canEdit, pending, onPrepare, onEdit }: ActionsProps) {
+  const prepareLabel = hasBrief ? 'Prepare it again' : 'Prepare the visit brief';
+  return (
+    <div className="no-print flex flex-wrap gap-3">
+      {hasBrief ? (
+        <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+          <PrinterIcon aria-hidden weight="bold" size={22} />
+          Print
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={`btn ${hasBrief ? 'btn-secondary' : 'btn-primary'}`}
+        disabled={pending}
+        onClick={onPrepare}
+      >
+        {pending ? 'Preparing the brief…' : prepareLabel}
+      </button>
+      {hasBrief && canEdit ? (
+        <button type="button" className="btn btn-quiet" onClick={onEdit}>
+          Edit the brief
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 interface Props {
   appointmentId: string;
   initial: VisitBrief | null;
   canEdit: boolean;
 }
 
-/** The visit brief: prepare it, read it, correct it, print it. A person always has the last word. */
-export function BriefPanel({ appointmentId, initial, canEdit }: Props) {
+/** The brief's state and the two calls that change it: prepare a new one, save corrections. */
+function useBrief(appointmentId: string, initial: VisitBrief | null) {
   const form = useRef<HTMLFormElement>(null);
   const [brief, setBrief] = useState(initial);
   const [editing, setEditing] = useState(false);
@@ -59,36 +150,34 @@ export function BriefPanel({ appointmentId, initial, canEdit }: Props) {
 
   async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const content: BriefContent = {
-      summary: String(data.get('summary') ?? ''),
-      patterns: toLines(String(data.get('patterns') ?? '')),
-      changes: toLines(String(data.get('changes') ?? '')),
-      questions: toLines(String(data.get('questions') ?? '')),
-    };
-    const next = await run(path, 'PUT', content, 'Saved your changes to the brief.');
+    const next = await run(
+      path,
+      'PUT',
+      toContent(new FormData(event.currentTarget)),
+      'Saved your changes to the brief.',
+    );
     if (!next) return;
     setBrief(next);
     setEditing(false);
   }
 
+  return { form, brief, editing, setEditing, pending, error, prepare, save };
+}
+
+/** The visit brief: prepare it, read it, correct it, print it. A person always has the last word. */
+export function BriefPanel({ appointmentId, initial, canEdit }: Props) {
+  const { form, brief, editing, setEditing, pending, error, prepare, save } = useBrief(appointmentId, initial);
+
   if (brief && editing) {
     return (
-      <form ref={form} onSubmit={save} noValidate className="grid gap-6">
-        <Field name="summary" label="Summary" as="textarea" defaultValue={brief.content.summary} error={error?.fields?.summary} />
-        {LISTS.map(({ key, title }) => (
-          <Field key={key} name={key} label={title} hint="One per line." as="textarea" defaultValue={brief.content[key].join('\n')} error={error?.fields?.[key]} />
-        ))}
-        <FormError error={error} />
-        <div className="flex flex-wrap gap-3">
-          <button type="submit" className="btn btn-primary" disabled={pending}>
-            {pending ? 'Saving…' : 'Save changes'}
-          </button>
-          <button type="button" className="btn btn-quiet" onClick={() => setEditing(false)}>
-            Discard changes
-          </button>
-        </div>
-      </form>
+      <BriefEditForm
+        formRef={form}
+        brief={brief}
+        error={error}
+        pending={pending}
+        onSave={save}
+        onDiscard={() => setEditing(false)}
+      />
     );
   }
 
@@ -98,27 +187,18 @@ export function BriefPanel({ appointmentId, initial, canEdit }: Props) {
         <BriefView brief={brief} />
       ) : (
         <p className="text-muted">
-          The brief gathers what happened since the last visit: doses taken and missed, medicine changes, and questions worth asking. You can
-          correct it before you print it.
+          The brief gathers what happened since the last visit: doses taken and missed, medicine changes, and questions
+          worth asking. You can correct it before you print it.
         </p>
       )}
       <FormError error={error} />
-      <div className="no-print flex flex-wrap gap-3">
-        {brief ? (
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            <PrinterIcon aria-hidden weight="bold" size={22} />
-            Print
-          </button>
-        ) : null}
-        <button type="button" className={`btn ${brief ? 'btn-secondary' : 'btn-primary'}`} disabled={pending} onClick={prepare}>
-          {pending ? 'Preparing the brief…' : brief ? 'Prepare it again' : 'Prepare the visit brief'}
-        </button>
-        {brief && canEdit ? (
-          <button type="button" className="btn btn-quiet" onClick={() => setEditing(true)}>
-            Edit the brief
-          </button>
-        ) : null}
-      </div>
+      <BriefActions
+        hasBrief={brief !== null}
+        canEdit={canEdit}
+        pending={pending}
+        onPrepare={prepare}
+        onEdit={() => setEditing(true)}
+      />
     </div>
   );
 }

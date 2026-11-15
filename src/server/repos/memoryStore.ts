@@ -37,66 +37,81 @@ function applyQuery(found: Found<Doc>[], query: Query = {}): Found<Doc>[] {
   return query.limit === undefined ? result : result.slice(0, query.limit);
 }
 
+type Docs = Map<string, Doc>;
+
+interface MemoryState {
+  docs: Docs;
+  /** The last transaction, so the next one waits for it. */
+  queue: Promise<unknown>;
+}
+
+function readDoc<T>(docs: Docs, path: string): T | null {
+  const doc = docs.get(path);
+  return doc === undefined ? null : (structuredClone(doc) as T);
+}
+
+function writeDoc(target: Docs, path: string, data: object): void {
+  target.set(path, structuredClone(data) as Doc);
+}
+
+function patchDoc(target: Docs, path: string, changes: object): void {
+  const current = target.get(path);
+  if (current === undefined) throw new Error(`No document at ${path}`);
+  target.set(path, { ...current, ...(structuredClone(changes) as Doc) });
+}
+
+function allDocs(docs: Docs): Found<Doc>[] {
+  return [...docs.entries()].map(([path, data]) => ({ path, data: structuredClone(data) }));
+}
+
+function inCollection(docs: Docs, collection: string): Found<Doc>[] {
+  return allDocs(docs).filter(
+    ({ path }) => path.startsWith(`${collection}/`) && !path.slice(collection.length + 1).includes('/'),
+  );
+}
+
+// Transactions run one at a time, which gives the same isolation Firestore promises.
+function runTransaction<T>(state: MemoryState, run: (tx: Transaction) => Promise<T>): Promise<T> {
+  const result = state.queue.then(async () => {
+    const writes: Array<(draft: Docs) => void> = [];
+    const value = await run({
+      get: async (path) => readDoc(state.docs, path),
+      set: (path, data) => writes.push((draft) => writeDoc(draft, path, data)),
+      update: (path, changes) => writes.push((draft) => patchDoc(draft, path, changes)),
+      delete: (path) => writes.push((draft) => draft.delete(path)),
+    });
+    // All or nothing, like Firestore: the writes land on a copy, which replaces the
+    // store only if every one of them succeeds.
+    const draft = new Map(state.docs);
+    writes.forEach((apply) => apply(draft));
+    state.docs = draft;
+    return value;
+  });
+  state.queue = result.catch(() => undefined);
+  return result;
+}
+
 /** In-memory DocStore with Firestore's semantics, for tests and for running without a database. */
 export function createMemoryStore(): DocStore {
-  let docs = new Map<string, Doc>();
-  let queue: Promise<unknown> = Promise.resolve();
-
-  const read = <T>(path: string): T | null => {
-    const doc = docs.get(path);
-    return doc === undefined ? null : (structuredClone(doc) as T);
-  };
-  const write = (path: string, data: object, target = docs): void => {
-    target.set(path, structuredClone(data) as Doc);
-  };
-  const patch = (path: string, changes: object, target = docs): void => {
-    const current = target.get(path);
-    if (current === undefined) throw new Error(`No document at ${path}`);
-    target.set(path, { ...current, ...(structuredClone(changes) as Doc) });
-  };
-  const all = (): Found<Doc>[] => [...docs.entries()].map(([path, data]) => ({ path, data: structuredClone(data) }));
-
+  const state: MemoryState = { docs: new Map(), queue: Promise.resolve() };
   return {
-    get: async (path) => read(path),
-    set: async (path, data) => write(path, data),
+    get: async (path) => readDoc(state.docs, path),
+    set: async (path, data) => writeDoc(state.docs, path, data),
     create: async (path, data) => {
-      if (docs.has(path)) return false;
-      write(path, data);
+      if (state.docs.has(path)) return false;
+      writeDoc(state.docs, path, data);
       return true;
     },
-    update: async (path, changes) => patch(path, changes),
+    update: async (path, changes) => patchDoc(state.docs, path, changes),
     delete: async (path) => {
-      docs.delete(path);
+      state.docs.delete(path);
     },
-    list: async <T>(collection: string, query?: Query) => {
-      const inCollection = all().filter(
-        ({ path }) => path.startsWith(`${collection}/`) && !path.slice(collection.length + 1).includes('/'),
-      );
-      return applyQuery(inCollection, query).map(({ data }) => data as T);
-    },
+    list: async <T>(collection: string, query?: Query) =>
+      applyQuery(inCollection(state.docs, collection), query).map(({ data }) => data as T),
     listGroup: async <T>(collectionId: string, query: Query) => {
-      const inGroup = all().filter(({ path }) => path.split('/').at(-2) === collectionId);
+      const inGroup = allDocs(state.docs).filter(({ path }) => path.split('/').at(-2) === collectionId);
       return applyQuery(inGroup, query) as Found<T>[];
     },
-    // Transactions run one at a time, which gives the same isolation Firestore promises.
-    transaction: <T>(run: (tx: Transaction) => Promise<T>) => {
-      const result = queue.then(async () => {
-        const writes: Array<(draft: Map<string, Doc>) => void> = [];
-        const value = await run({
-          get: async (path) => read(path),
-          set: (path, data) => writes.push((draft) => write(path, data, draft)),
-          update: (path, changes) => writes.push((draft) => patch(path, changes, draft)),
-          delete: (path) => writes.push((draft) => draft.delete(path)),
-        });
-        // All or nothing, like Firestore: the writes land on a copy, which replaces the
-        // store only if every one of them succeeds.
-        const draft = new Map(docs);
-        writes.forEach((apply) => apply(draft));
-        docs = draft;
-        return value;
-      });
-      queue = result.catch(() => undefined);
-      return result;
-    },
+    transaction: (run) => runTransaction(state, run),
   };
 }

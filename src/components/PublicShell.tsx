@@ -17,8 +17,8 @@ export function SiteFooter() {
   return (
     <footer className="no-print mx-auto mt-20 max-w-5xl px-4 pb-12 text-muted">
       <p className="hint max-w-[44rem] border-t border-line pt-6">
-        {APP_NAME} helps a family keep track together. It is not a medical device and gives no medical advice. Always check with your doctor or
-        pharmacist.
+        {APP_NAME} helps a family keep track together. It is not a medical device and gives no medical advice. Always
+        check with your doctor or pharmacist.
       </p>
     </footer>
   );

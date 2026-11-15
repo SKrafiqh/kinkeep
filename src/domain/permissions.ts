@@ -1,11 +1,6 @@
 import type { Role } from './types';
 
-export type Permission =
-  | 'circle:view'
-  | 'dose:act'
-  | 'medication:write'
-  | 'appointment:write'
-  | 'members:manage';
+export type Permission = 'circle:view' | 'dose:act' | 'medication:write' | 'appointment:write' | 'members:manage';
 
 export const ROLES: readonly Role[] = ['elder', 'caregiver', 'family'];
 export const PERMISSIONS: readonly Permission[] = [

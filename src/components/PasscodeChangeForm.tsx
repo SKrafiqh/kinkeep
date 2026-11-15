@@ -25,8 +25,17 @@ export function PasscodeChangeForm({ isSetup }: { isSetup: boolean }) {
 
   return (
     <form ref={form} onSubmit={submit} noValidate className="grid gap-6">
-      <PasscodeInput name="current" label={isSetup ? 'The one-time passcode you were given' : 'Your current passcode'} error={error?.fields?.current} />
-      <PasscodeInput name="passcode" label="Your new 6-digit passcode" hint="Pick one only you know." error={error?.fields?.passcode} />
+      <PasscodeInput
+        name="current"
+        label={isSetup ? 'The one-time passcode you were given' : 'Your current passcode'}
+        error={error?.fields?.current}
+      />
+      <PasscodeInput
+        name="passcode"
+        label="Your new 6-digit passcode"
+        hint="Pick one only you know."
+        error={error?.fields?.passcode}
+      />
       <FormError error={error} />
       <button type="submit" className="btn btn-primary justify-self-start" disabled={pending}>
         {pending ? 'Saving…' : 'Save my passcode'}

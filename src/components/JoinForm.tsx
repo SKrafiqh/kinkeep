@@ -1,15 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Field, FormError } from './Field';
-import { PasscodeInput } from './PasscodeInput';
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { CodeStep, PasscodeStep, WhoStep, type Person } from './JoinSteps';
 import { useAction, useFocusFirstError } from './useAction';
-
-interface Person {
-  id: string;
-  name: string;
-}
 
 interface Found {
   code: string;
@@ -17,8 +11,17 @@ interface Found {
   members: Person[];
 }
 
-/** Sign-in in three short steps: the circle code, your name, your passcode. */
-export function JoinForm({ initialCode }: { initialCode: string }) {
+/** Each step replaces the last, so move focus to the new heading for keyboard and screen-reader users. */
+function useFocusOnStepChange(heading: RefObject<HTMLHeadingElement | null>, step: string): void {
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) firstRender.current = false;
+    else heading.current?.focus();
+  }, [heading, step]);
+}
+
+/** The join flow's state and the two calls behind it: find the circle, then sign in. */
+function useJoin() {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -26,19 +29,14 @@ export function JoinForm({ initialCode }: { initialCode: string }) {
   const [person, setPerson] = useState<Person | null>(null);
   const lookup = useAction<Omit<Found, 'code'>>();
   const signIn = useAction<{ home: string }>();
-  const step = circle === null ? 'code' : person === null ? 'who' : 'passcode';
   useFocusFirstError(form, lookup.error ?? signIn.error);
-
-  // Each step replaces the last, so move focus to the new heading for keyboard and screen-reader users.
-  const firstRender = useRef(true);
-  useEffect(() => {
-    if (firstRender.current) firstRender.current = false;
-    else heading.current?.focus();
-  }, [step]);
+  useFocusOnStepChange(heading, circle === null ? 'code' : person === null ? 'who' : 'passcode');
 
   async function findCircle(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const code = String(new FormData(event.currentTarget).get('code') ?? '').trim().toUpperCase();
+    const code = String(new FormData(event.currentTarget).get('code') ?? '')
+      .trim()
+      .toUpperCase();
     const found = await lookup.run(`/api/circles/lookup?code=${encodeURIComponent(code)}`, 'GET');
     if (found) setCircle({ code, ...found });
   }
@@ -53,66 +51,43 @@ export function JoinForm({ initialCode }: { initialCode: string }) {
     router.refresh();
   }
 
-  if (step === 'code') {
+  return { form, heading, circle, setCircle, person, setPerson, lookup, signIn, findCircle, enter };
+}
+
+/** Sign-in in three short steps: the circle code, your name, your passcode. */
+export function JoinForm({ initialCode }: { initialCode: string }) {
+  const { form, heading, circle, setCircle, person, setPerson, lookup, signIn, findCircle, enter } = useJoin();
+  const refs = { formRef: form, headingRef: heading };
+  if (circle === null) {
     return (
-      <form ref={form} onSubmit={findCircle} noValidate className="grid gap-6">
-        <h2 ref={heading} tabIndex={-1}>
-          Enter your circle code
-        </h2>
-        <Field
-          name="code"
-          label="Circle code"
-          hint="Six letters and numbers. The person who set up the circle has it."
-          defaultValue={initialCode}
-          autoCapitalize="characters"
-          autoComplete="off"
-          maxLength={6}
-          error={lookup.error?.fields?.code ?? (lookup.error ? lookup.error.message : undefined)}
-        />
-        <button type="submit" className="btn btn-primary justify-self-start" disabled={lookup.pending}>
-          {lookup.pending ? 'Looking for your circle…' : 'Continue'}
-        </button>
-      </form>
+      <CodeStep
+        {...refs}
+        error={lookup.error}
+        pending={lookup.pending}
+        onSubmit={findCircle}
+        initialCode={initialCode}
+      />
     );
   }
-
-  if (step === 'who' && circle) {
+  if (person === null) {
     return (
-      <div className="grid gap-6">
-        <h2 ref={heading} tabIndex={-1}>
-          {circle.elderName}’s circle. Who are you?
-        </h2>
-        <ul className="grid gap-3">
-          {circle.members.map((member) => (
-            <li key={member.id}>
-              <button type="button" className="btn btn-secondary w-full justify-start" onClick={() => setPerson(member)}>
-                {member.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" className="btn btn-quiet justify-self-start" onClick={() => setCircle(null)}>
-          Use a different code
-        </button>
-      </div>
+      <WhoStep
+        headingRef={heading}
+        elderName={circle.elderName}
+        members={circle.members}
+        onPick={setPerson}
+        onBack={() => setCircle(null)}
+      />
     );
   }
-
   return (
-    <form ref={form} onSubmit={enter} noValidate className="grid gap-6">
-      <h2 ref={heading} tabIndex={-1}>
-        Hello {person?.name}. Enter your passcode
-      </h2>
-      <PasscodeInput name="passcode" label="Your 6-digit passcode" error={signIn.error?.fields?.passcode} />
-      <FormError error={signIn.error} />
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" className="btn btn-primary" disabled={signIn.pending}>
-          {signIn.pending ? 'Signing in…' : 'Sign in'}
-        </button>
-        <button type="button" className="btn btn-quiet" onClick={() => setPerson(null)}>
-          I am someone else
-        </button>
-      </div>
-    </form>
+    <PasscodeStep
+      {...refs}
+      error={signIn.error}
+      pending={signIn.pending}
+      onSubmit={enter}
+      name={person.name}
+      onBack={() => setPerson(null)}
+    />
   );
 }

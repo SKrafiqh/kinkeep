@@ -25,12 +25,20 @@ describe('adherenceOf', () => {
   });
 
   it('reports no percentage when nothing is settled', () => {
-    expect(adherenceOf([dose('Metformin', '2026-11-16', '20:00', 'reminded')])).toEqual({ taken: 0, total: 0, percent: null });
+    expect(adherenceOf([dose('Metformin', '2026-11-16', '20:00', 'reminded')])).toEqual({
+      taken: 0,
+      total: 0,
+      percent: null,
+    });
     expect(adherenceOf([])).toEqual({ taken: 0, total: 0, percent: null });
   });
 
   it('rounds to a whole percent', () => {
-    const three = [dose('A', '2026-11-14', '08:00', 'taken'), dose('A', '2026-11-15', '08:00', 'taken'), dose('A', '2026-11-16', '08:00', 'missed')];
+    const three = [
+      dose('A', '2026-11-14', '08:00', 'taken'),
+      dose('A', '2026-11-15', '08:00', 'taken'),
+      dose('A', '2026-11-16', '08:00', 'missed'),
+    ];
     expect(adherenceOf(three).percent).toBe(67);
   });
 });

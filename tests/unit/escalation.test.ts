@@ -7,15 +7,19 @@ const at = (minutes: number): number => DUE + minutes * MINUTE_MS;
 
 describe('advanceDose', () => {
   it('does nothing before the first look', () => {
-    expect(advanceDose({ status: 'scheduled', dueAt: DUE, nextActionAt: at(-15) }, at(-16), REMINDER_DEFAULTS)).toBeNull();
+    expect(
+      advanceDose({ status: 'scheduled', dueAt: DUE, nextActionAt: at(-15) }, at(-16), REMINDER_DEFAULTS),
+    ).toBeNull();
   });
 
   it('walks scheduled → reminded → nudged → missed on time', () => {
-    expect(advanceDose({ status: 'scheduled', dueAt: DUE, nextActionAt: at(-15) }, at(-15), REMINDER_DEFAULTS)).toEqual({
-      status: 'reminded',
-      nextActionAt: at(30),
-      notify: true,
-    });
+    expect(advanceDose({ status: 'scheduled', dueAt: DUE, nextActionAt: at(-15) }, at(-15), REMINDER_DEFAULTS)).toEqual(
+      {
+        status: 'reminded',
+        nextActionAt: at(30),
+        notify: true,
+      },
+    );
     expect(advanceDose({ status: 'reminded', dueAt: DUE, nextActionAt: at(30) }, at(30), REMINDER_DEFAULTS)).toEqual({
       status: 'nudged',
       nextActionAt: at(60),
@@ -31,7 +35,11 @@ describe('advanceDose', () => {
   it('jumps straight to the right stage when a tick is late', () => {
     const scheduled = { status: 'scheduled', dueAt: DUE, nextActionAt: at(-15) } as const;
     expect(advanceDose(scheduled, at(31), REMINDER_DEFAULTS)?.status).toBe('nudged');
-    expect(advanceDose(scheduled, at(61), REMINDER_DEFAULTS)).toEqual({ status: 'missed', nextActionAt: null, notify: true });
+    expect(advanceDose(scheduled, at(61), REMINDER_DEFAULTS)).toEqual({
+      status: 'missed',
+      nextActionAt: null,
+      notify: true,
+    });
   });
 
   it('reschedules without notifying when the stage has not moved', () => {
@@ -81,10 +89,8 @@ describe('doseView', () => {
   });
 
   it('knows which statuses are open', () => {
-    expect(['scheduled', 'reminded', 'nudged', 'missed', 'taken', 'skipped'].filter((s) => isOpen(s as never))).toEqual([
-      'scheduled',
-      'reminded',
-      'nudged',
-    ]);
+    expect(['scheduled', 'reminded', 'nudged', 'missed', 'taken', 'skipped'].filter((s) => isOpen(s as never))).toEqual(
+      ['scheduled', 'reminded', 'nudged'],
+    );
   });
 });

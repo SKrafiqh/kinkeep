@@ -33,15 +33,22 @@ beforeEach(async () => {
 });
 
 async function familyCookie(): Promise<string> {
-  const added = await call(addMemberRoute, { cookie, body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' } });
+  const added = await call(addMemberRoute, {
+    cookie,
+    body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' },
+  });
   const found = await call(lookupRoute, { query: `?code=${code}` });
   const memberId = found.data.members.find((m: { name: string }) => m.name === 'Arjun').id;
   const first = await call(signInRoute, { body: { code, memberId, passcode: added.data.setupPasscode } });
-  const changed = await call(passcodeRoute, { cookie: first.cookie, body: { current: added.data.setupPasscode, passcode: '135790' } });
+  const changed = await call(passcodeRoute, {
+    cookie: first.cookie,
+    body: { current: added.data.setupPasscode, passcode: '135790' },
+  });
   return changed.cookie ?? (first.cookie as string);
 }
 
-const today = async (as: string = cookie): Promise<Dose[]> => (await call(dosesRoute, { cookie: as, query: '?date=2026-11-16' })).data.doses;
+const today = async (as: string = cookie): Promise<Dose[]> =>
+  (await call(dosesRoute, { cookie: as, query: '?date=2026-11-16' })).data.doses;
 
 describe('GET /api/health', () => {
   it('answers ok without a session', async () => {
@@ -92,11 +99,15 @@ describe('GET /api/doses', () => {
 });
 
 describe('POST /api/doses/[id]/act', () => {
-  const act = (id: string, body: unknown, as: string = cookie) => call(doseActRoute, { cookie: as, params: { id }, body });
+  const act = (id: string, body: unknown, as: string = cookie) =>
+    call(doseActRoute, { cookie: as, params: { id }, body });
 
   async function twoAtNineOneAtEight(): Promise<Dose[]> {
     await call(addMedRoute, { cookie, body: { ...MEDICINE_INPUT, name: 'Metformin', times: ['09:00'] } });
-    await call(addMedRoute, { cookie, body: { ...MEDICINE_INPUT, name: 'Aspirin', strength: '75 mg', times: ['09:00', '20:00'] } });
+    await call(addMedRoute, {
+      cookie,
+      body: { ...MEDICINE_INPUT, name: 'Aspirin', strength: '75 mg', times: ['09:00', '20:00'] },
+    });
     return today();
   }
 
@@ -115,7 +126,12 @@ describe('POST /api/doses/[id]/act', () => {
     const result = await act(metformin?.id ?? '', { action: 'skipped', slot: true });
     expect(result.data.doses).toHaveLength(2);
     const after = await today();
-    expect(after.filter((d) => d.status === 'skipped').map((d) => d.medName).sort()).toEqual(['Aspirin', 'Metformin']);
+    expect(
+      after
+        .filter((d) => d.status === 'skipped')
+        .map((d) => d.medName)
+        .sort(),
+    ).toEqual(['Aspirin', 'Metformin']);
     expect(after.find((d) => d.dueAt === Date.UTC(2026, 10, 16, 14, 30))?.status).not.toBe('skipped');
   });
 
@@ -145,7 +161,10 @@ describe('POST /api/circles/demo', () => {
 
   it('seeds a full circle and signs in as the elder', async () => {
     const result = await demo();
-    expect(result).toMatchObject({ status: 200, data: { home: '/today', code: expect.stringMatching(/^[A-Z2-9]{6}$/) } });
+    expect(result).toMatchObject({
+      status: 200,
+      data: { home: '/today', code: expect.stringMatching(/^[A-Z2-9]{6}$/) },
+    });
     expect(result.cookie).toMatch(/^kk_session=/);
     const circles = await world.deps.store.list<{ id: string; demoPasscode: string | null; code: string }>('circles');
     const circle = circles.find((c) => c.code === result.data.code);
@@ -181,7 +200,10 @@ describe('POST /api/circles/demo', () => {
   });
 
   it('rejects an invalid or missing time zone and unknown fields', async () => {
-    expect(await demo({ timeZone: 'Mars/Olympus' })).toMatchObject({ status: 400, error: { fields: { timeZone: expect.any(String) } } });
+    expect(await demo({ timeZone: 'Mars/Olympus' })).toMatchObject({
+      status: 400,
+      error: { fields: { timeZone: expect.any(String) } },
+    });
     expect((await demo({})).status).toBe(400);
     expect((await demo({ timeZone: 'Asia/Kolkata', admin: true })).status).toBe(400);
   });
@@ -226,7 +248,10 @@ describe('POST /api/test-reminder', () => {
   it('lowercases the address and rejects an invalid or unknown input', async () => {
     expect((await send({ email: 'ME@Example.COM' })).status).toBe(200);
     expect(world.emails[0].to).toBe('me@example.com');
-    expect(await send({ email: 'not-an-email' }, cookie, '198.51.100.50')).toMatchObject({ status: 400, error: { fields: { email: expect.any(String) } } });
+    expect(await send({ email: 'not-an-email' }, cookie, '198.51.100.50')).toMatchObject({
+      status: 400,
+      error: { fields: { email: expect.any(String) } },
+    });
     expect((await send({ email: 'a@b.co', cc: 'x@y.co' }, cookie, '198.51.100.51')).status).toBe(400);
     expect((await send({}, cookie, '198.51.100.52')).status).toBe(400);
     expect(world.emails).toHaveLength(1);

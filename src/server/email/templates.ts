@@ -20,7 +20,8 @@ export interface SlotEmail {
   actUrl: string;
 }
 
-const medicineLines = (medicines: SlotMedicine[]): string[] => medicines.map((med) => `${med.name} ${med.strength}`.trim());
+const medicineLines = (medicines: SlotMedicine[]): string[] =>
+  medicines.map((med) => `${med.name} ${med.strength}`.trim());
 
 function slotActions(actUrl: string) {
   return {
@@ -92,7 +93,11 @@ export function appointmentEmail(input: {
     subject,
     ...renderEmail({
       heading: `${input.whose} appointment with ${input.doctor}`,
-      lines: [`When: ${input.when}`, ...(details ? [details] : []), 'The visit brief shows what happened since the last visit and questions to ask.'],
+      lines: [
+        `When: ${input.when}`,
+        ...(details ? [details] : []),
+        'The visit brief shows what happened since the last visit and questions to ask.',
+      ],
       primary: { label: 'Open visit brief', url: input.briefUrl },
     }),
   };
@@ -103,7 +108,11 @@ export function weeklySummaryEmail(input: { elderName: string; sentences: string
   const subject = `${input.elderName}'s week in medicines`;
   return {
     subject,
-    ...renderEmail({ heading: subject, lines: input.sentences, primary: { label: 'Open the circle', url: input.circleUrl } }),
+    ...renderEmail({
+      heading: subject,
+      lines: input.sentences,
+      primary: { label: 'Open the circle', url: input.circleUrl },
+    }),
   };
 }
 
@@ -113,7 +122,10 @@ export function sampleEmail(todayUrl: string): EmailContent {
     subject: 'Your test reminder',
     ...renderEmail({
       heading: 'This is your test reminder',
-      lines: ['Dose reminders look like this and arrive 15 minutes before each dose, with a button to confirm it.', 'There is no dose waiting right now, so this one has no confirm button.'],
+      lines: [
+        'Dose reminders look like this and arrive 15 minutes before each dose, with a button to confirm it.',
+        'There is no dose waiting right now, so this one has no confirm button.',
+      ],
       primary: { label: 'Open Today', url: todayUrl },
     }),
   };

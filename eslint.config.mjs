@@ -18,7 +18,10 @@ export default defineConfig([
     files: ['src/domain/**'],
     rules: {
       'no-restricted-imports': ['error', { patterns: ['@/server/*', '@/app/*', 'next', 'next/*', 'react', 'node:*'] }],
-      'no-restricted-properties': ['error', { object: 'Date', property: 'now', message: 'Pass time in as an argument.' }],
+      'no-restricted-properties': [
+        'error',
+        { object: 'Date', property: 'now', message: 'Pass time in as an argument.' },
+      ],
     },
   },
   {
@@ -26,5 +29,13 @@ export default defineConfig([
     files: ['src/components/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: ['@/server/*'] }] },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'coverage/**', 'playwright-report/**', 'test-results/**']),
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'coverage/**',
+    'playwright-report/**',
+    'test-results/**',
+  ]),
 ]);

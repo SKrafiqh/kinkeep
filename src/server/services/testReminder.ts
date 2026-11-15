@@ -18,7 +18,12 @@ async function buildEmail(deps: Deps, who: MemberContext): Promise<{ content: Em
   const next = ahead.find((dose) => isOpen(dose.status));
   if (!next) return { content: sampleEmail(`${deps.config.APP_URL}/today`), withActions: false };
   const slot = ahead.filter((dose) => dose.slotKey === next.slotKey && isOpen(dose.status));
-  const token = issueActionToken(deps.config, { circleId: who.circle.id, slotKey: next.slotKey, memberId: who.member.id, dueAt: next.dueAt });
+  const token = issueActionToken(deps.config, {
+    circleId: who.circle.id,
+    slotKey: next.slotKey,
+    memberId: who.member.id,
+    dueAt: next.dueAt,
+  });
   const content = upcomingEmail(
     {
       whose: whose(who.member, who.circle),
@@ -32,12 +37,17 @@ async function buildEmail(deps: Deps, who: MemberContext): Promise<{ content: Em
 }
 
 /** Sends one real reminder for the next open slot to the address entered, with working one-tap links. */
-export async function sendTestReminder(deps: Deps, who: MemberContext, email: string): Promise<{ withActions: boolean }> {
+export async function sendTestReminder(
+  deps: Deps,
+  who: MemberContext,
+  email: string,
+): Promise<{ withActions: boolean }> {
   // The address is typed in by the caller, so sends are capped in the database, per circle and overall.
   const allowed =
     (await takeDaily(deps, paths.quota(who.circle.id, 'testEmail'), TEST_EMAIL_CIRCLE_CAP)) &&
     (await takeDaily(deps, paths.globalQuota('testEmail'), TEST_EMAIL_GLOBAL_CAP));
-  if (!allowed) throw new AppError('RATE_LIMITED', 'That is all the test reminders for today. Real reminders are not affected.');
+  if (!allowed)
+    throw new AppError('RATE_LIMITED', 'That is all the test reminders for today. Real reminders are not affected.');
   const { content, withActions } = await buildEmail(deps, who);
   try {
     await deps.email.send({ to: email, ...content });

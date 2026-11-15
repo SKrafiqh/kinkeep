@@ -7,6 +7,37 @@ import { useAction } from './useAction';
 
 type Action = 'taken' | 'skipped';
 
+function ActButtons({
+  preferred,
+  pending,
+  onMark,
+}: {
+  preferred: Action;
+  pending: boolean;
+  onMark: (action: Action) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="button"
+        className={`btn ${preferred === 'taken' ? 'btn-primary' : 'btn-secondary'} min-w-48`}
+        disabled={pending}
+        onClick={() => onMark('taken')}
+      >
+        <CheckIcon aria-hidden weight="bold" size={24} />I took them
+      </button>
+      <button
+        type="button"
+        className={`btn ${preferred === 'skipped' ? 'btn-primary' : 'btn-secondary'}`}
+        disabled={pending}
+        onClick={() => onMark('skipped')}
+      >
+        Skip this dose
+      </button>
+    </div>
+  );
+}
+
 /**
  * The confirm step for a one-tap email link. Opening the page changes nothing (mail scanners
  * open links too); the dose is only marked when a person presses a button here.
@@ -26,22 +57,15 @@ export function ActForm({ token, preferred }: { token: string; preferred: Action
     return (
       <p ref={result} tabIndex={-1} className="flex items-start gap-3 font-bold text-taken">
         <CheckCircleIcon aria-hidden weight="bold" size={30} className="flex-none" />
-        {done === 'taken' ? 'Done. These are marked as taken.' : 'Done. These are marked as skipped.'} You can close this page.
+        {done === 'taken' ? 'Done. These are marked as taken.' : 'Done. These are marked as skipped.'} You can close
+        this page.
       </p>
     );
   }
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap gap-3">
-        <button type="button" className={`btn ${preferred === 'taken' ? 'btn-primary' : 'btn-secondary'} min-w-48`} disabled={pending} onClick={() => mark('taken')}>
-          <CheckIcon aria-hidden weight="bold" size={24} />
-          I took them
-        </button>
-        <button type="button" className={`btn ${preferred === 'skipped' ? 'btn-primary' : 'btn-secondary'}`} disabled={pending} onClick={() => mark('skipped')}>
-          Skip this dose
-        </button>
-      </div>
+      <ActButtons preferred={preferred} pending={pending} onMark={mark} />
       {pending ? <p>Saving…</p> : null}
       <FormError error={error} />
     </div>

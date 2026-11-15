@@ -34,8 +34,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <main id="main" tabIndex={-1} className="rise mx-auto max-w-5xl px-4 pt-8">
         {circle.demoPasscode ? (
           <p className="card no-print mb-6">
-            <strong>This is a demo circle.</strong> Its code is <strong>{circle.code}</strong> and everyone’s passcode is{' '}
-            <strong>{circle.demoPasscode}</strong>. Sign out and join as Priya to see what a caregiver sees.
+            <strong>This is a demo circle.</strong> Its code is <strong>{circle.code}</strong> and everyone’s passcode
+            is <strong>{circle.demoPasscode}</strong>. Sign out and join as Priya to see what a caregiver sees.
           </p>
         ) : null}
         <SessionWarning expiresAt={expiresAt} />

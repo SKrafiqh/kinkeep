@@ -17,7 +17,8 @@ export default async function MembersPage() {
       <div>
         <h1>Members</h1>
         <p>
-          You decide who is in your circle, what they can change, and what they are told. The circle code is <strong>{circle.code}</strong>.
+          You decide who is in your circle, what they can change, and what they are told. The circle code is{' '}
+          <strong>{circle.code}</strong>.
         </p>
       </div>
       <ul className="grid gap-4">

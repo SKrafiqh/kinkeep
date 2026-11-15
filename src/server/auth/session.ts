@@ -23,9 +23,17 @@ function cookie(value: string, maxAgeSeconds: number, config: Config): string {
 }
 
 /** Set-Cookie value that signs a member in for 12 hours. */
-export function issueSession(config: Config, now: number, who: { circleId: string; memberId: string; role: Role }): string {
+export function issueSession(
+  config: Config,
+  now: number,
+  who: { circleId: string; memberId: string; role: Role },
+): string {
   const exp = Math.floor((now + SESSION_HOURS * HOUR_MS) / 1000);
-  return cookie(signToken({ typ: 'session', ...who, exp }, config.SESSION_SECRET), SESSION_HOURS * 3600, config);
+  return cookie(
+    signToken({ typ: 'session', ...who, exp }, config.SESSION_SECRET),
+    (SESSION_HOURS * HOUR_MS) / 1000,
+    config,
+  );
 }
 
 /** Set-Cookie value that signs the browser out. */

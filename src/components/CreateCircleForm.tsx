@@ -42,8 +42,8 @@ function CircleReady({ created }: { created: Created }) {
           <span className="label">One-time passcode for {created.elderName}</span>
           <span className="text-[2rem] font-bold tracking-[0.2em]">{created.elderSetupPasscode}</span>
           <span className="block">
-            {created.elderName} uses it to sign in the first time and then chooses their own. It is shown only once. Until they sign in, their
-            reminders come to your email.
+            {created.elderName} uses it to sign in the first time and then chooses their own. It is shown only once.
+            Until they sign in, their reminders come to your email.
           </span>
         </p>
       ) : null}
@@ -54,39 +54,72 @@ function CircleReady({ created }: { created: Created }) {
   );
 }
 
-/** Creates a circle. A relative can set it up; the elder still gets their own passcode. */
-export function CreateCircleForm({ timeZones }: { timeZones: string[] }) {
-  const form = useRef<HTMLFormElement>(null);
-  const [role, setRole] = useState<Role>('caregiver');
-  const [created, setCreated] = useState<Created | null>(null);
-  const { run, pending, error } = useAction<Created>();
-  const localZone = useSyncExternalStore(subscribeToNothing, browserZone, () => FALLBACK_ZONE);
-  const fields = error?.fields ?? {};
-  useFocusFirstError(form, error);
-
-  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const text = (name: string): string => String(data.get(name) ?? '');
-    const elderName = text('elderName');
-    const body = { elderName, timeZone: text('timeZone'), name: role === 'elder' ? elderName : text('name'), email: text('email'), role, passcode: text('passcode') };
-    const result = await run('/api/circles', 'POST', body, 'Your circle is ready.');
-    if (result) setCreated(result);
-  }
-
-  if (created) return <CircleReady created={created} />;
-
+function RoleChoice({ role, onChange }: { role: Role; onChange: (role: Role) => void }) {
   return (
-    <form ref={form} onSubmit={submit} noValidate className="grid gap-6">
-      <fieldset className="grid gap-2">
-        <legend className="label mb-2">Who are you?</legend>
-        {ROLES.map((option) => (
-          <label key={option.value} className="flex min-h-12 items-center gap-3">
-            <input type="radio" name="role" className="size-6" value={option.value} checked={role === option.value} onChange={() => setRole(option.value)} />
-            {option.label}
-          </label>
-        ))}
-      </fieldset>
+    <fieldset className="grid gap-2">
+      <legend className="label mb-2">Who are you?</legend>
+      {ROLES.map((option) => (
+        <label key={option.value} className="flex min-h-12 items-center gap-3">
+          <input
+            type="radio"
+            name="role"
+            className="size-6"
+            value={option.value}
+            checked={role === option.value}
+            onChange={() => onChange(option.value)}
+          />
+          {option.label}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+function TimeZoneField({ timeZones, error }: { timeZones: string[]; error?: string }) {
+  const localZone = useSyncExternalStore(subscribeToNothing, browserZone, () => FALLBACK_ZONE);
+  return (
+    <Field
+      key={localZone}
+      name="timeZone"
+      label="Time zone"
+      hint="Reminder times follow this zone."
+      as="select"
+      defaultValue={timeZones.includes(localZone) ? localZone : FALLBACK_ZONE}
+      error={error}
+    >
+      {timeZones.map((zone) => (
+        <option key={zone} value={zone}>
+          {zone.replaceAll('_', ' ')}
+        </option>
+      ))}
+    </Field>
+  );
+}
+
+function toRequestBody(data: FormData, role: Role) {
+  const text = (name: string): string => String(data.get(name) ?? '');
+  const elderName = text('elderName');
+  return {
+    elderName,
+    timeZone: text('timeZone'),
+    name: role === 'elder' ? elderName : text('name'),
+    email: text('email'),
+    role,
+    passcode: text('passcode'),
+  };
+}
+
+function CircleFields({
+  role,
+  fields,
+  timeZones,
+}: {
+  role: Role;
+  fields: Record<string, string>;
+  timeZones: string[];
+}) {
+  return (
+    <>
       <Field
         name="elderName"
         label={role === 'elder' ? 'Your name' : 'Name of the person receiving care'}
@@ -95,23 +128,50 @@ export function CreateCircleForm({ timeZones }: { timeZones: string[] }) {
         error={fields.elderName}
       />
       {role === 'elder' ? null : <Field name="name" label="Your name" autoComplete="name" error={fields.name} />}
-      <Field name="email" label="Your email" hint="Reminders and alerts are sent here." type="email" autoComplete="email" error={fields.email} />
       <Field
-        key={localZone}
-        name="timeZone"
-        label="Time zone"
-        hint="Reminder times follow this zone."
-        as="select"
-        defaultValue={timeZones.includes(localZone) ? localZone : FALLBACK_ZONE}
-        error={fields.timeZone}
-      >
-        {timeZones.map((zone) => (
-          <option key={zone} value={zone}>
-            {zone.replaceAll('_', ' ')}
-          </option>
-        ))}
-      </Field>
-      <PasscodeInput name="passcode" label="Choose a 6-digit passcode" hint="You will use it every time you sign in." error={fields.passcode} />
+        name="email"
+        label="Your email"
+        hint="Reminders and alerts are sent here."
+        type="email"
+        autoComplete="email"
+        error={fields.email}
+      />
+      <TimeZoneField timeZones={timeZones} error={fields.timeZone} />
+      <PasscodeInput
+        name="passcode"
+        label="Choose a 6-digit passcode"
+        hint="You will use it every time you sign in."
+        error={fields.passcode}
+      />
+    </>
+  );
+}
+
+/** Creates a circle. A relative can set it up; the elder still gets their own passcode. */
+export function CreateCircleForm({ timeZones }: { timeZones: string[] }) {
+  const form = useRef<HTMLFormElement>(null);
+  const [role, setRole] = useState<Role>('caregiver');
+  const [created, setCreated] = useState<Created | null>(null);
+  const { run, pending, error } = useAction<Created>();
+  useFocusFirstError(form, error);
+
+  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const result = await run(
+      '/api/circles',
+      'POST',
+      toRequestBody(new FormData(event.currentTarget), role),
+      'Your circle is ready.',
+    );
+    if (result) setCreated(result);
+  }
+
+  if (created) return <CircleReady created={created} />;
+
+  return (
+    <form ref={form} onSubmit={submit} noValidate className="grid gap-6">
+      <RoleChoice role={role} onChange={setRole} />
+      <CircleFields role={role} fields={error?.fields ?? {}} timeZones={timeZones} />
       <FormError error={error} />
       <button type="submit" className="btn btn-primary justify-self-start" disabled={pending}>
         {pending ? 'Creating your circle…' : 'Create the circle'}

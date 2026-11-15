@@ -23,5 +23,7 @@ export function maskEmail(email: string): string {
 
 /** Name and message of a thrown value, for logs only. */
 export function errorFields(error: unknown): Fields {
-  return error instanceof Error ? { errorName: error.name, errorMessage: error.message } : { errorMessage: String(error) };
+  return error instanceof Error
+    ? { errorName: error.name, errorMessage: error.message }
+    : { errorMessage: String(error) };
 }

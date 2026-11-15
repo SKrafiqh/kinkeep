@@ -24,7 +24,8 @@ async function verify(deps: Deps, token: string): Promise<Verified> {
     deps.store.get<Member>(paths.member(claims.circleId, claims.memberId)),
     slotDoses(deps, claims.circleId, claims.slotKey),
   ]);
-  const allowed = circle && member && member.removedAt === null && (can(member.role, 'dose:act') || circle.remindersTo === member.id);
+  const allowed =
+    circle && member && member.removedAt === null && (can(member.role, 'dose:act') || circle.remindersTo === member.id);
   if (!circle || !allowed || doses.length === 0) throw new AppError('UNAUTHENTICATED', INVALID);
   return { claims, circle, doses };
 }
@@ -60,11 +61,13 @@ export async function performAction(deps: Deps, token: string, action: DoseActio
     expireAt: new Date(claims.exp * 1000),
   });
   if (!firstUse) throw new AppError('CONFLICT', 'This link was already used. Open the app to see today’s doses.');
-  const settled = await actOnSlot(deps, claims.circleId, doses[0].slotKey, action, claims.memberId).catch(async (error: unknown) => {
-    // The dose was not marked, so give the link back rather than leave the person stuck.
-    await deps.store.delete(paths.usedToken(claims.jti));
-    throw error;
-  });
+  const settled = await actOnSlot(deps, claims.circleId, doses[0].slotKey, { action, memberId: claims.memberId }).catch(
+    async (error: unknown) => {
+      // The dose was not marked, so give the link back rather than leave the person stuck.
+      await deps.store.delete(paths.usedToken(claims.jti));
+      throw error;
+    },
+  );
   if (settled.length === 0) throw new AppError('CONFLICT', 'These medicines were already marked. Nothing was changed.');
   return { count: settled.length };
 }

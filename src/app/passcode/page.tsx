@@ -13,7 +13,9 @@ export default async function PasscodePage() {
     <PublicShell>
       <div className="grid gap-6">
         <h1>{isSetup ? `Welcome, ${who.member.name}. Choose your own passcode` : 'Change your passcode'}</h1>
-        {isSetup ? <p>The passcode you were given works once. Pick a new one that only you know, and you are in.</p> : null}
+        {isSetup ? (
+          <p>The passcode you were given works once. Pick a new one that only you know, and you are in.</p>
+        ) : null}
         <PasscodeChangeForm isSetup={isSetup} />
       </div>
     </PublicShell>

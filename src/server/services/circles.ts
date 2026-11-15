@@ -14,6 +14,8 @@ import { recordActivity } from './activity';
 // No 0/O or 1/I/L: codes get read aloud and typed by hand.
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
+/** Collisions are rare at this code length, so a few tries are plenty. */
+const CODE_ATTEMPTS = 5;
 
 export const ALERTS_ON: AlertSettings = { missedDose: true, appointments: true, weeklySummary: true };
 /** New members start with every alert off; the elder opts each person in. */
@@ -21,16 +23,24 @@ export const ALERTS_OFF: AlertSettings = { missedDose: false, appointments: fals
 
 /** A join code no other circle uses. */
 export async function newCircleCode(deps: Deps): Promise<string> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt += 1) {
     const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
     if ((await findCircleByCode(deps.store, code)) === null) return code;
   }
   throw new Error('Could not allocate a circle code');
 }
 
+/** A new member with a hashed passcode, not yet saved. */
 export async function buildMember(
   deps: Deps,
-  input: { name: string; email: string | null; role: Role; passcode: string; mustChangePasscode: boolean; alerts: AlertSettings },
+  input: {
+    name: string;
+    email: string | null;
+    role: Role;
+    passcode: string;
+    mustChangePasscode: boolean;
+    alerts: AlertSettings;
+  },
 ): Promise<Member> {
   const { passcode, ...rest } = input;
   return {
@@ -43,6 +53,7 @@ export async function buildMember(
   };
 }
 
+/** A new circle with default reminder settings and its first weekly summary scheduled, not yet saved. */
 export function buildCircle(input: {
   elderName: string;
   timeZone: string;
@@ -59,6 +70,18 @@ export function buildCircle(input: {
     settings: { ...REMINDER_DEFAULTS },
     nextSummaryAt: nextWeeklySummaryAt(now, input.timeZone),
   };
+}
+
+/** The elder's own member when a relative sets the circle up: no email, and a passcode to change on first sign-in. */
+function buildSetupElder(deps: Deps, elderName: string, setupPasscode: string): Promise<Member> {
+  return buildMember(deps, {
+    name: elderName,
+    email: null,
+    role: 'elder',
+    passcode: setupPasscode,
+    mustChangePasscode: true,
+    alerts: ALERTS_ON,
+  });
 }
 
 export interface CreatedCircle {
@@ -87,9 +110,7 @@ export async function createCircle(deps: Deps, input: CreateCircleInput): Promis
     alerts: ALERTS_ON,
   });
   const elderSetupPasscode = isElder ? null : randomPasscode();
-  const elder = elderSetupPasscode
-    ? await buildMember(deps, { name: input.elderName, email: null, role: 'elder', passcode: elderSetupPasscode, mustChangePasscode: true, alerts: ALERTS_ON })
-    : null;
+  const elder = elderSetupPasscode ? await buildSetupElder(deps, input.elderName, elderSetupPasscode) : null;
   const circle = buildCircle({
     elderName: input.elderName,
     timeZone: input.timeZone,
@@ -99,7 +120,9 @@ export async function createCircle(deps: Deps, input: CreateCircleInput): Promis
     demoPasscode: null,
   });
   await deps.store.set(paths.circle(circle.id), circle);
-  await Promise.all([creator, ...(elder ? [elder] : [])].map((member) => deps.store.set(paths.member(circle.id, member.id), member)));
+  await Promise.all(
+    [creator, ...(elder ? [elder] : [])].map((member) => deps.store.set(paths.member(circle.id, member.id), member)),
+  );
   await recordActivity(deps, circle.id, creator, {
     action: 'circle.create',
     targetType: 'circle',
@@ -110,7 +133,10 @@ export async function createCircle(deps: Deps, input: CreateCircleInput): Promis
 }
 
 /** What the join screen needs: display names only, never emails or roles. */
-export async function lookupCircle(deps: Deps, code: string): Promise<{ elderName: string; members: Array<{ id: string; name: string }> }> {
+export async function lookupCircle(
+  deps: Deps,
+  code: string,
+): Promise<{ elderName: string; members: Array<{ id: string; name: string }> }> {
   const circle = await findCircleByCode(deps.store, code);
   if (!circle) throw new AppError('NOT_FOUND', 'We could not find a circle with that code. Check it and try again.');
   const members = await listMembers(deps.store, circle.id);

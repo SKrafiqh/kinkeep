@@ -10,8 +10,20 @@ import { AI_DAILY_CAP, DAY_MS } from '@/lib/constants';
 import { briefUserPrompt } from '@/server/ai/briefPrompt';
 import { call, CIRCLE_INPUT, createCircle, createWorld, type World } from './helpers';
 
-const APPOINTMENT = { doctor: 'Dr Mehta', speciality: 'Cardiology', place: 'City Clinic', date: '2026-11-19', time: '10:30', notes: 'Bring reports' };
-const AI_BRIEF = { summary: 'Mr Rao took most doses.', patterns: ['Evening doses are missed.'], changes: ['Metformin went up.'], questions: ['Is the evening dose needed?'] };
+const APPOINTMENT = {
+  doctor: 'Dr Mehta',
+  speciality: 'Cardiology',
+  place: 'City Clinic',
+  date: '2026-11-19',
+  time: '10:30',
+  notes: 'Bring reports',
+};
+const AI_BRIEF = {
+  summary: 'Mr Rao took most doses.',
+  patterns: ['Evening doses are missed.'],
+  changes: ['Metformin went up.'],
+  questions: ['Is the evening dose needed?'],
+};
 
 let world: World;
 let cookie: string;
@@ -26,15 +38,23 @@ async function setUp(options: { withAi?: boolean } = {}): Promise<void> {
   appointmentId = (await call(addAppointmentRoute, { cookie, body: APPOINTMENT })).data.id;
 }
 
-const generate = (as: string | undefined = cookie, id: string = appointmentId, ip?: string) => call(generateBriefRoute, { method: 'POST', cookie: as, params: { id }, ip });
-const save = (body: unknown, as: string = cookie, id: string = appointmentId) => call(saveBriefRoute, { method: 'PUT', cookie: as, params: { id }, body });
+const generate = (as: string | undefined = cookie, id: string = appointmentId, ip?: string) =>
+  call(generateBriefRoute, { method: 'POST', cookie: as, params: { id }, ip });
+const save = (body: unknown, as: string = cookie, id: string = appointmentId) =>
+  call(saveBriefRoute, { method: 'PUT', cookie: as, params: { id }, body });
 
 async function familyCookie(): Promise<string> {
-  const added = await call(addMemberRoute, { cookie, body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' } });
+  const added = await call(addMemberRoute, {
+    cookie,
+    body: { name: 'Arjun', email: 'arjun@example.com', role: 'family' },
+  });
   const found = await call(lookupRoute, { query: `?code=${code}` });
   const memberId = found.data.members.find((m: { name: string }) => m.name === 'Arjun').id;
   const first = await call(signInRoute, { body: { code, memberId, passcode: added.data.setupPasscode } });
-  const changed = await call(passcodeRoute, { cookie: first.cookie, body: { current: added.data.setupPasscode, passcode: '135790' } });
+  const changed = await call(passcodeRoute, {
+    cookie: first.cookie,
+    body: { current: added.data.setupPasscode, passcode: '135790' },
+  });
   return changed.cookie ?? (first.cookie as string);
 }
 
@@ -129,7 +149,9 @@ describe('the daily AI cap', () => {
     for (let i = 0; i < AI_DAILY_CAP; i += 1) await generate(cookie, appointmentId, `198.51.100.${i + 1}`);
     world.time.now += DAY_MS;
     const found = await call(lookupRoute, { query: `?code=${code}` });
-    const again = await call(signInRoute, { body: { code, memberId: found.data.members[0].id, passcode: CIRCLE_INPUT.passcode } });
+    const again = await call(signInRoute, {
+      body: { code, memberId: found.data.members[0].id, passcode: CIRCLE_INPUT.passcode },
+    });
     expect((await generate(again.cookie, appointmentId, '198.51.100.201')).data.source).toBe('ai');
   });
 });
@@ -152,7 +174,12 @@ describe('saving an edited brief', () => {
     world.time.now += 60_000;
     const edited = { ...AI_BRIEF, summary: 'Edited by hand.' };
     const result = await save(edited);
-    expect(result.data).toMatchObject({ source: 'ai', editedBy: 'Mr Rao', content: edited, generatedAt: generated.data.generatedAt });
+    expect(result.data).toMatchObject({
+      source: 'ai',
+      editedBy: 'Mr Rao',
+      content: edited,
+      generatedAt: generated.data.generatedAt,
+    });
     expect((await call(listAppointmentsRoute, { cookie })).data[0].brief.content.summary).toBe('Edited by hand.');
   });
 
@@ -169,7 +196,9 @@ describe('saving an edited brief', () => {
 
   it('refuses family with 403 and anonymous callers with 401', async () => {
     expect((await save(AI_BRIEF, await familyCookie())).status).toBe(403);
-    expect((await call(saveBriefRoute, { method: 'PUT', params: { id: appointmentId }, body: AI_BRIEF })).status).toBe(401);
+    expect((await call(saveBriefRoute, { method: 'PUT', params: { id: appointmentId }, body: AI_BRIEF })).status).toBe(
+      401,
+    );
   });
 
   it('answers 404 for an unknown appointment', async () => {

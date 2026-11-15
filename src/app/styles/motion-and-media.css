@@ -1,0 +1,70 @@
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Smooth jumps to sections, and lifting buttons, only for people who have not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover,
+  .btn:active {
+    transform: none;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* Windows high-contrast mode drops shadows and backgrounds; keep every pane's edge visible. */
+@media (forced-colors: active) {
+  .glass,
+  .card,
+  .nav-pill,
+  .dock {
+    border: 1px solid CanvasText;
+  }
+
+  .wordmark {
+    background: none;
+    color: CanvasText;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+    font-size: 12pt;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body::before {
+    display: none;
+  }
+
+  .card,
+  .glass {
+    background: #ffffff;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

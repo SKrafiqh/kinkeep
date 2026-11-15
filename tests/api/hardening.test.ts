@@ -20,7 +20,8 @@ let world: World;
 let cookie: string;
 
 const tick = () => call(tickRoute, { method: 'POST', origin: null, headers: { 'x-cron-secret': CRON_SECRET } });
-const today = async (): Promise<DoseEvent[]> => (await call(dosesRoute, { cookie, query: '?date=2026-11-16' })).data.doses;
+const today = async (): Promise<DoseEvent[]> =>
+  (await call(dosesRoute, { cookie, query: '?date=2026-11-16' })).data.doses;
 
 beforeEach(async () => {
   world = createWorld();
@@ -38,7 +39,10 @@ describe('daily caps kept in the database', () => {
   it('stops test reminders for a circle after the daily cap, whatever the caller address', async () => {
     const statuses: number[] = [];
     for (let i = 0; i <= TEST_EMAIL_CIRCLE_CAP; i += 1) {
-      statuses.push((await call(testReminderRoute, { cookie, body: { email: 'someone@example.com' }, ip: `198.51.100.${i}` })).status);
+      statuses.push(
+        (await call(testReminderRoute, { cookie, body: { email: 'someone@example.com' }, ip: `198.51.100.${i}` }))
+          .status,
+      );
     }
     expect(statuses.slice(0, TEST_EMAIL_CIRCLE_CAP).every((status) => status === 200)).toBe(true);
     expect(statuses[TEST_EMAIL_CIRCLE_CAP]).toBe(429);
@@ -46,7 +50,10 @@ describe('daily caps kept in the database', () => {
   });
 
   it('stops new demo circles once the app-wide daily cap is used', async () => {
-    await world.deps.store.set('quota/demo', { day: new Date(START).toISOString().slice(0, 10), count: DEMO_GLOBAL_CAP });
+    await world.deps.store.set('quota/demo', {
+      day: new Date(START).toISOString().slice(0, 10),
+      count: DEMO_GLOBAL_CAP,
+    });
     const result = await call(demoRoute, { body: { timeZone: 'Asia/Kolkata' } });
     expect(result).toMatchObject({ status: 429, error: { code: 'RATE_LIMITED' } });
   });
@@ -64,7 +71,12 @@ describe('size limits', () => {
 
 describe('request guards', () => {
   it('treats an id that is not a plain id as not found', async () => {
-    const result = await call(patchMedRoute, { method: 'PATCH', cookie, params: { id: 'a/../b' }, body: MEDICINE_INPUT });
+    const result = await call(patchMedRoute, {
+      method: 'PATCH',
+      cookie,
+      params: { id: 'a/../b' },
+      body: MEDICINE_INPUT,
+    });
     expect(result.status).toBe(404);
   });
 
@@ -137,7 +149,12 @@ describe('reminder engine resilience', () => {
     await tick();
     const [dose] = await today();
     world.time.now = DUE + 10 * MINUTE_MS;
-    await call(patchMedRoute, { method: 'PATCH', cookie, params: { id: dose.medId }, body: { ...MEDICINE_INPUT, active: false } });
+    await call(patchMedRoute, {
+      method: 'PATCH',
+      cookie,
+      params: { id: dose.medId },
+      body: { ...MEDICINE_INPUT, active: false },
+    });
     world.emails.length = 0;
     for (const minutes of [30, 60, 90]) {
       world.time.now = DUE + minutes * MINUTE_MS;
@@ -152,7 +169,12 @@ describe('circle dashboard', () => {
   it('reports empty adherence, no next visit, and the change feed', async () => {
     const [circle] = await world.deps.store.list<Circle>('circles');
     const dashboard = await circleDashboard(world.deps, circle);
-    expect(dashboard).toMatchObject({ week: { percent: null }, month: { percent: null }, nextAppointment: null, byMedicine: [] });
+    expect(dashboard).toMatchObject({
+      week: { percent: null },
+      month: { percent: null },
+      nextAppointment: null,
+      byMedicine: [],
+    });
     expect(dashboard.strip).toHaveLength(7);
     expect(dashboard.activity[0].summary).toBe('Mr Rao created the circle');
   });

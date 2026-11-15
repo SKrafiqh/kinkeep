@@ -6,52 +6,25 @@ import { GET as listMedsRoute, POST as addMedRoute } from '@/app/api/medications
 import { DELETE as removeMemberRoute, PATCH as patchMemberRoute } from '@/app/api/members/[id]/route';
 import { GET as listMembersRoute, POST as addMemberRoute } from '@/app/api/members/route';
 import { POST as passcodeRoute } from '@/app/api/passcode/route';
-import { DELETE as signOutRoute, POST as signInRoute } from '@/app/api/session/route';
-import { MINUTE_MS } from '@/lib/constants';
-import { hashPasscode, newPasscodeFields, randomPasscode, verifyPasscode } from '@/server/auth/passcode';
+import { POST as signInRoute } from '@/app/api/session/route';
 import { issueSession } from '@/server/auth/session';
-import { call, CIRCLE_INPUT, createCircle, createWorld, MEDICINE_INPUT, type World } from './helpers';
+import { call, CIRCLE_INPUT, createCircle, createWorld, MEDICINE_INPUT, signIn, type World } from './helpers';
 
 let world: World;
 beforeEach(() => {
   world = createWorld();
 });
 
-async function signIn(code: string, name: string, passcode: string, ip?: string) {
-  const found = await call(lookupRoute, { query: `?code=${code}`, ip });
-  const memberId = found.data.members.find((m: { name: string }) => m.name === name).id;
-  return call(signInRoute, { body: { code, memberId, passcode }, ip });
-}
-
 /** The elder adds a helper, who signs in with the setup passcode and chooses their own. */
 async function addHelper(elderCookie: string, code: string, name: string, role: 'caregiver' | 'family') {
-  const added = await call(addMemberRoute, { cookie: elderCookie, body: { name, email: `${name.toLowerCase()}@example.com`, role } });
+  const added = await call(addMemberRoute, {
+    cookie: elderCookie,
+    body: { name, email: `${name.toLowerCase()}@example.com`, role },
+  });
   const first = await signIn(code, name, added.data.setupPasscode);
   await call(passcodeRoute, { cookie: first.cookie, body: { current: added.data.setupPasscode, passcode: '135790' } });
   return { cookie: first.cookie as string, id: added.data.member.id as string };
 }
-
-describe('passcode hashing', () => {
-  it('is deterministic for one salt and pepper, and different for any other', async () => {
-    const salt = 'a1'.repeat(16);
-    const hash = await hashPasscode('246810', salt, 'pepper-one');
-    expect(await hashPasscode('246810', salt, 'pepper-one')).toBe(hash);
-    expect(await hashPasscode('246810', salt, 'pepper-two')).not.toBe(hash);
-    expect(await hashPasscode('246810', 'b2'.repeat(16), 'pepper-one')).not.toBe(hash);
-    expect(hash).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('verifies only the right passcode', async () => {
-    const { passcodeHash, passcodeSalt } = await newPasscodeFields('246810', 'pepper');
-    expect(await verifyPasscode('246810', passcodeSalt, passcodeHash, 'pepper')).toBe(true);
-    expect(await verifyPasscode('246811', passcodeSalt, passcodeHash, 'pepper')).toBe(false);
-    expect(await verifyPasscode('246810', passcodeSalt, 'not-hex', 'pepper')).toBe(false);
-  });
-
-  it('generates six-digit setup passcodes', () => {
-    for (let i = 0; i < 50; i += 1) expect(randomPasscode()).toMatch(/^\d{6}$/);
-  });
-});
 
 describe('creating a circle', () => {
   it('returns a code and signs the creator in with a locked-down cookie', async () => {
@@ -80,13 +53,18 @@ describe('creating a circle', () => {
     expect(elder.data.home).toBe('/passcode');
     const blocked = await call(listMedsRoute, { cookie: elder.cookie });
     expect(blocked).toMatchObject({ status: 403, error: { code: 'PASSCODE_CHANGE_REQUIRED' } });
-    const changed = await call(passcodeRoute, { cookie: elder.cookie, body: { current: created.data.elderSetupPasscode, passcode: '112233' } });
+    const changed = await call(passcodeRoute, {
+      cookie: elder.cookie,
+      body: { current: created.data.elderSetupPasscode, passcode: '112233' },
+    });
     expect(changed.data.home).toBe('/today');
     expect((await call(listMedsRoute, { cookie: elder.cookie })).status).toBe(200);
   });
 
   it('rejects bad input field by field and unknown fields', async () => {
-    const bad = await call(circlesRoute, { body: { ...CIRCLE_INPUT, passcode: '12ab', email: 'nope', timeZone: 'Mars/Olympus' } });
+    const bad = await call(circlesRoute, {
+      body: { ...CIRCLE_INPUT, passcode: '12ab', email: 'nope', timeZone: 'Mars/Olympus' },
+    });
     expect(bad.status).toBe(400);
     expect(Object.keys(bad.error?.fields ?? {}).sort()).toEqual(['email', 'passcode', 'timeZone']);
     expect((await call(circlesRoute, { body: { ...CIRCLE_INPUT, admin: true } })).status).toBe(400);
@@ -96,73 +74,6 @@ describe('creating a circle', () => {
   it('refuses a relative whose name matches the elder', async () => {
     const result = await call(circlesRoute, { body: { ...CIRCLE_INPUT, role: 'caregiver', name: 'mr rao' } });
     expect(result).toMatchObject({ status: 400, error: { fields: { name: expect.any(String) } } });
-  });
-});
-
-describe('signing in', () => {
-  it('signs out and back in', async () => {
-    const { code, cookie } = await createCircle();
-    const out = await call(signOutRoute, { method: 'DELETE', cookie });
-    expect(out.cookie).toBe('kk_session=');
-    expect((await call(listMedsRoute, {})).status).toBe(401);
-    const back = await signIn(code, 'Mr Rao', CIRCLE_INPUT.passcode);
-    expect(back).toMatchObject({ status: 200, data: { home: '/today' } });
-    expect((await call(listMedsRoute, { cookie: back.cookie })).status).toBe(200);
-  });
-
-  it('counts down wrong tries, then locks the member for 15 minutes', async () => {
-    const { code } = await createCircle();
-    const first = await signIn(code, 'Mr Rao', '000000');
-    expect(first).toMatchObject({ status: 401, error: { message: 'That passcode did not match. 4 tries left.' } });
-    for (let i = 0; i < 3; i += 1) await signIn(code, 'Mr Rao', '000000');
-    const fifth = await signIn(code, 'Mr Rao', '000000');
-    expect(fifth).toMatchObject({ status: 423, error: { code: 'LOCKED' } });
-    expect(fifth.error?.message).toContain('8:45 am');
-    expect((await signIn(code, 'Mr Rao', CIRCLE_INPUT.passcode)).status).toBe(423);
-    world.time.now += 15 * MINUTE_MS + 1;
-    expect((await signIn(code, 'Mr Rao', CIRCLE_INPUT.passcode)).status).toBe(200);
-  });
-
-  it('resets the count after a correct passcode', async () => {
-    const { code } = await createCircle();
-    for (let i = 0; i < 4; i += 1) await signIn(code, 'Mr Rao', '000000');
-    expect((await signIn(code, 'Mr Rao', CIRCLE_INPUT.passcode)).status).toBe(200);
-    expect((await signIn(code, 'Mr Rao', '000000')).error?.message).toContain('4 tries left');
-  });
-
-  it('cannot be outrun by parallel guesses', async () => {
-    const { code } = await createCircle();
-    const found = await call(lookupRoute, { query: `?code=${code}` });
-    const memberId = found.data.members[0].id;
-    const guesses = Array.from({ length: 12 }, (_, i) => call(signInRoute, { body: { code, memberId, passcode: String(100000 + i) } }));
-    const results = await Promise.all(guesses);
-    expect(results.filter((r) => r.status === 423).length).toBeGreaterThanOrEqual(8);
-    expect((await signIn(code, 'Mr Rao', CIRCLE_INPUT.passcode)).status).toBe(423);
-  });
-
-  it('shows names only on the join screen and hides unknown circles', async () => {
-    const { code } = await createCircle();
-    const found = await call(lookupRoute, { query: `?code=${code.toLowerCase()}` });
-    expect(found.data).toEqual({ elderName: 'Mr Rao', members: [{ id: expect.any(String), name: 'Mr Rao' }] });
-    expect((await call(lookupRoute, { query: '?code=ZZZZZZ' })).status).toBe(404);
-    expect((await call(lookupRoute, { query: '?code=x' })).status).toBe(400);
-    expect((await call(signInRoute, { body: { code: 'ZZZZZZ', memberId: 'm1', passcode: '123456' } })).status).toBe(404);
-  });
-
-  it('rejects an expired or tampered session', async () => {
-    const { cookie } = await createCircle();
-    expect((await call(listMedsRoute, { cookie: `${cookie}x` })).status).toBe(401);
-    expect((await call(listMedsRoute, { cookie: 'kk_session=a.b.c' })).status).toBe(401);
-    world.time.now += 12 * 60 * MINUTE_MS + 1000;
-    expect((await call(listMedsRoute, { cookie })).status).toBe(401);
-  });
-
-  it('requires the current passcode to set a new one', async () => {
-    const { cookie, code } = await createCircle();
-    expect((await call(passcodeRoute, { cookie, body: { current: '000000', passcode: '112233' } })).status).toBe(401);
-    expect((await call(passcodeRoute, { cookie, body: { current: CIRCLE_INPUT.passcode, passcode: CIRCLE_INPUT.passcode } })).status).toBe(400);
-    expect((await call(passcodeRoute, { cookie, body: { current: CIRCLE_INPUT.passcode, passcode: '112233' } })).status).toBe(200);
-    expect((await signIn(code, 'Mr Rao', '112233')).status).toBe(200);
   });
 });
 
@@ -178,7 +89,8 @@ describe('request guards', () => {
   it('rate limits public routes per address', async () => {
     const { code } = await createCircle();
     const statuses: number[] = [];
-    for (let i = 0; i < 22; i += 1) statuses.push((await call(lookupRoute, { query: `?code=${code}`, ip: '198.51.100.9' })).status);
+    for (let i = 0; i < 22; i += 1)
+      statuses.push((await call(lookupRoute, { query: `?code=${code}`, ip: '198.51.100.9' })).status);
     expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true);
     expect(statuses[21]).toBe(429);
     expect((await call(lookupRoute, { query: `?code=${code}`, ip: '198.51.100.10' })).status).toBe(200);
@@ -201,9 +113,16 @@ describe('roles and isolation', () => {
     const b = await createCircle({ elderName: 'Mrs Das', name: 'Mrs Das', email: 'das@example.com' });
     const med = await call(addMedRoute, { cookie: a.cookie, body: MEDICINE_INPUT });
     expect((await call(listMedsRoute, { cookie: b.cookie })).data).toEqual([]);
-    const patch = await call(patchMedRoute, { method: 'PATCH', cookie: b.cookie, params: { id: med.data.id }, body: { ...MEDICINE_INPUT, strength: '9999 mg' } });
+    const patch = await call(patchMedRoute, {
+      method: 'PATCH',
+      cookie: b.cookie,
+      params: { id: med.data.id },
+      body: { ...MEDICINE_INPUT, strength: '9999 mg' },
+    });
     expect(patch.status).toBe(404);
-    expect((await call(deleteMedRoute, { method: 'DELETE', cookie: b.cookie, params: { id: med.data.id } })).status).toBe(404);
+    expect(
+      (await call(deleteMedRoute, { method: 'DELETE', cookie: b.cookie, params: { id: med.data.id } })).status,
+    ).toBe(404);
     expect((await call(listMedsRoute, { cookie: a.cookie })).data[0].strength).toBe('500 mg');
   });
 
@@ -242,8 +161,13 @@ describe('roles and isolation', () => {
     const elderId = members.data[0].id;
     expect(JSON.stringify(members.data)).not.toContain('passcode');
     expect((await call(removeMemberRoute, { method: 'DELETE', cookie, params: { id: elderId } })).status).toBe(400);
-    expect((await call(patchMemberRoute, { method: 'PATCH', cookie, params: { id: elderId }, body: { role: 'family' } })).status).toBe(400);
-    expect((await call(addMemberRoute, { cookie, body: { name: 'Mr Rao', email: null, role: 'family' } })).status).toBe(409);
+    expect(
+      (await call(patchMemberRoute, { method: 'PATCH', cookie, params: { id: elderId }, body: { role: 'family' } }))
+        .status,
+    ).toBe(400);
+    expect((await call(addMemberRoute, { cookie, body: { name: 'Mr Rao', email: null, role: 'family' } })).status).toBe(
+      409,
+    );
     expect((await call(addMemberRoute, { cookie, body: { name: 'X', email: null, role: 'elder' } })).status).toBe(400);
   });
 });

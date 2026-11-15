@@ -80,7 +80,9 @@ export function zonedToInstant(date: string, time: string, timeZone: string): nu
   const wall = Date.UTC(year, month - 1, day, hour, minute);
   // The zone's offset a day either side covers both sides of any clock change.
   const candidates = [wall - offsetMs(wall - DAY_MS, timeZone), wall - offsetMs(wall + DAY_MS, timeZone)];
-  const exact = candidates.filter((instant) => localDate(instant, timeZone) === date && localTime(instant, timeZone) === time);
+  const exact = candidates.filter(
+    (instant) => localDate(instant, timeZone) === date && localTime(instant, timeZone) === time,
+  );
   return Math.min(...(exact.length > 0 ? exact : candidates));
 }
 

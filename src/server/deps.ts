@@ -30,7 +30,9 @@ function build(): Deps {
     store: config.DATA_STORE === 'firestore' ? createFirestoreStore(config) : createMemoryStore(),
     clock: systemClock,
     email: createEmailSender(config),
-    ai: config.AI_API_KEY ? createAdaptionClient({ apiKey: config.AI_API_KEY, model: config.AI_MODEL, baseUrl: config.AI_BASE_URL }) : null,
+    ai: config.AI_API_KEY
+      ? createAdaptionClient({ apiKey: config.AI_API_KEY, model: config.AI_MODEL, baseUrl: config.AI_BASE_URL })
+      : null,
     oidc: googleOidcVerifier,
   };
 }

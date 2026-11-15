@@ -28,12 +28,17 @@ const tick = (): void => {
   world.time.now += MINUTE_MS;
 };
 const add = (body: unknown) => (tick(), call(addMemberRoute, { cookie, body }));
-const patch = (id: string, body: unknown) => (tick(), call(patchMemberRoute, { method: 'PATCH', cookie, params: { id }, body }));
+const patch = (id: string, body: unknown) => (
+  tick(),
+  call(patchMemberRoute, { method: 'PATCH', cookie, params: { id }, body })
+);
 const remove = (id: string) => (tick(), call(removeMemberRoute, { method: 'DELETE', cookie, params: { id } }));
 const members = async (): Promise<MemberView[]> => (await call(listMembersRoute, { cookie })).data;
 const member = async (id: string): Promise<MemberView | undefined> => (await members()).find((m) => m.id === id);
-const feed = async (): Promise<string[]> => (await call(activityRoute, { cookie })).data.map((a: { summary: string }) => a.summary);
-const addPriya = async (): Promise<string> => (await add({ name: 'Priya', email: 'priya@example.com', role: 'caregiver' })).data.member.id;
+const feed = async (): Promise<string[]> =>
+  (await call(activityRoute, { cookie })).data.map((a: { summary: string }) => a.summary);
+const addPriya = async (): Promise<string> =>
+  (await add({ name: 'Priya', email: 'priya@example.com', role: 'caregiver' })).data.member.id;
 
 describe('adding members', () => {
   it('starts every alert off, requires a passcode change and hands back a six-digit setup passcode', async () => {
@@ -53,7 +58,9 @@ describe('adding members', () => {
 
   it('allows a member without an email and lowercases the email', async () => {
     expect((await add({ name: 'Arjun', email: null, role: 'family' })).data.member.email).toBeNull();
-    expect((await add({ name: 'Meena', email: 'MEENA@Example.COM', role: 'family' })).data.member.email).toBe('meena@example.com');
+    expect((await add({ name: 'Meena', email: 'MEENA@Example.COM', role: 'family' })).data.member.email).toBe(
+      'meena@example.com',
+    );
   });
 
   it('lists members sorted by name, without secrets', async () => {
@@ -98,7 +105,9 @@ describe('changing alert switches', () => {
   it('rejects a partial or unknown alerts object', async () => {
     const id = await addPriya();
     expect((await patch(id, { alerts: { missedDose: true } })).status).toBe(400);
-    expect((await patch(id, { alerts: { missedDose: true, appointments: true, weeklySummary: true, sms: true } })).status).toBe(400);
+    expect(
+      (await patch(id, { alerts: { missedDose: true, appointments: true, weeklySummary: true, sms: true } })).status,
+    ).toBe(400);
   });
 });
 
@@ -113,7 +122,10 @@ describe('changing name, email and role', () => {
   it('refuses a rename to another member name with 409, but allows keeping your own', async () => {
     const id = await addPriya();
     await add({ name: 'Arjun', email: null, role: 'family' });
-    expect(await patch(id, { name: 'arjun' })).toMatchObject({ status: 409, error: { fields: { name: expect.any(String) } } });
+    expect(await patch(id, { name: 'arjun' })).toMatchObject({
+      status: 409,
+      error: { fields: { name: expect.any(String) } },
+    });
     expect((await patch(id, { name: 'Priya' })).status).toBe(200);
     expect((await member(id))?.name).toBe('Priya');
   });

@@ -41,8 +41,8 @@ describe('weeklySummarySentences', () => {
       'Mr Rao took 19 of 21 doses this week (90%).',
       'The dose missed most often was Atorvastatin at 8:00 pm, missed 2 times.',
     ]);
-    expect(weeklySummarySentences('Mr Rao', { taken: 20, total: 21, percent: 95 }, [{ ...patterns[0], missed: 1 }])[1]).toBe(
-      'The dose missed most often was Atorvastatin at 8:00 pm, missed once.',
-    );
+    expect(
+      weeklySummarySentences('Mr Rao', { taken: 20, total: 21, percent: 95 }, [{ ...patterns[0], missed: 1 }])[1],
+    ).toBe('The dose missed most often was Atorvastatin at 8:00 pm, missed once.');
   });
 });

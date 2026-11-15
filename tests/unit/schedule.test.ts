@@ -93,33 +93,34 @@ describe('dose events', () => {
 
 describe('planMaterialisation', () => {
   const now = zonedToInstant('2026-11-16', '06:00', KOLKATA);
+  const circle = { id: 'c1', timeZone: KOLKATA, settings: REMINDER_DEFAULTS };
 
   it('plans the next 36 hours', () => {
-    const plan = planMaterialisation('c1', medicine(), KOLKATA, REMINDER_DEFAULTS, now);
+    const plan = planMaterialisation(circle, medicine(), now);
     expect(plan.events.map((e) => e.id)).toEqual(['med1_20261116_0800', 'med1_20261116_2000', 'med1_20261117_0800']);
     expect(plan.materialisedUntil).toBe(now + 36 * HOUR_MS);
   });
 
   it('only tops up beyond the existing horizon', () => {
     const med = medicine({ materialisedUntil: now + 36 * HOUR_MS });
-    const plan = planMaterialisation('c1', med, KOLKATA, REMINDER_DEFAULTS, now + 6 * HOUR_MS);
+    const plan = planMaterialisation(circle, med, now + 6 * HOUR_MS);
     expect(plan.events.map((e) => e.id)).toEqual(['med1_20261117_2000']);
   });
 
   it('never plans doses in the past, even after a long outage', () => {
     const med = medicine({ materialisedUntil: now - 72 * HOUR_MS });
-    const plan = planMaterialisation('c1', med, KOLKATA, REMINDER_DEFAULTS, now);
+    const plan = planMaterialisation(circle, med, now);
     expect(plan.events.every((e) => e.dueAt > now)).toBe(true);
   });
 
   it('stops topping up once the end date is covered', () => {
-    const plan = planMaterialisation('c1', medicine({ endDate: '2026-11-16' }), KOLKATA, REMINDER_DEFAULTS, now);
+    const plan = planMaterialisation(circle, medicine({ endDate: '2026-11-16' }), now);
     expect(plan.events).toHaveLength(2);
     expect(plan.materialisedUntil).toBeNull();
   });
 
   it('plans nothing for a paused medicine', () => {
-    const plan = planMaterialisation('c1', medicine({ active: false }), KOLKATA, REMINDER_DEFAULTS, now);
+    const plan = planMaterialisation(circle, medicine({ active: false }), now);
     expect(plan).toEqual({ events: [], materialisedUntil: null });
   });
 });

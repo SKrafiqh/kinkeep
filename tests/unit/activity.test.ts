@@ -34,7 +34,13 @@ describe('medicationChangeSummary', () => {
   });
 
   it('lists every changed field', () => {
-    const after = { ...BASE, times: ['08:00', '20:00'], daysOfWeek: [1, 3, 5], instructions: 'Before food', endDate: '2026-12-01' };
+    const after = {
+      ...BASE,
+      times: ['08:00', '20:00'],
+      daysOfWeek: [1, 3, 5],
+      instructions: 'Before food',
+      endDate: '2026-12-01',
+    };
     expect(medicationChangeSummary('Priya', BASE, after)).toBe(
       'Priya changed Metformin times from 8:00 am to 8:00 am and 8:00 pm, days from every day to Mon, Wed, Fri, the instructions, end date to Tue 1 Dec',
     );

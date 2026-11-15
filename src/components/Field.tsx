@@ -16,7 +16,13 @@ type FieldProps = Omit<ComponentProps<'input'>, 'name' | 'id' | 'className'> & {
 export function Field({ name, label, hint, error, as = 'input', children, ...rest }: FieldProps) {
   const id = `f-${name}`;
   const describedBy = [hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined;
-  const shared = { id, name, className: 'input', 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined };
+  const shared = {
+    id,
+    name,
+    className: 'input',
+    'aria-describedby': describedBy,
+    'aria-invalid': error ? true : undefined,
+  };
   return (
     <div className="grid gap-2">
       <label htmlFor={id} className="label">

@@ -20,7 +20,11 @@ export interface MemberContext {
  * The circle and member behind a session token, re-read from the database every time, so a
  * removed member or a changed role takes effect on the very next request.
  */
-export async function memberForSession(deps: Deps, token: string | null | undefined, now: number): Promise<MemberContext | null> {
+export async function memberForSession(
+  deps: Deps,
+  token: string | null | undefined,
+  now: number,
+): Promise<MemberContext | null> {
   const session = readSession(token, deps.config, now);
   if (!session) return null;
   const [circle, member] = await Promise.all([
@@ -46,10 +50,14 @@ function claimAttempt(deps: Deps, circleId: string, memberId: string, now: numbe
   return deps.store.transaction(async (tx) => {
     const member = await tx.get<Member>(path);
     if (!member || member.removedAt !== null) throw new AppError('UNAUTHENTICATED', 'That passcode did not match.');
-    if (member.lockedUntil !== null && member.lockedUntil > now) return { member, lockedUntil: member.lockedUntil, triesLeft: 0 };
+    if (member.lockedUntil !== null && member.lockedUntil > now)
+      return { member, lockedUntil: member.lockedUntil, triesLeft: 0 };
     const failed = member.failedAttempts + 1;
     const locks = failed >= MAX_FAILED_ATTEMPTS;
-    tx.update(path, { failedAttempts: locks ? 0 : failed, lockedUntil: locks ? now + LOCKOUT_MINUTES * MINUTE_MS : null });
+    tx.update(path, {
+      failedAttempts: locks ? 0 : failed,
+      lockedUntil: locks ? now + LOCKOUT_MINUTES * MINUTE_MS : null,
+    });
     return { member, lockedUntil: null, triesLeft: MAX_FAILED_ATTEMPTS - failed };
   });
 }
@@ -64,25 +72,38 @@ export async function checkPasscode(deps: Deps, circle: Circle, memberId: string
     return { ...member, failedAttempts: 0, lockedUntil: null };
   }
   if (triesLeft === 0) throw lockedError(now + LOCKOUT_MINUTES * MINUTE_MS, circle.timeZone);
-  throw new AppError('UNAUTHENTICATED', `That passcode did not match. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left.`);
+  throw new AppError(
+    'UNAUTHENTICATED',
+    `That passcode did not match. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left.`,
+  );
 }
 
 /** Signs a member in and returns the Set-Cookie value for their 12-hour session. */
-export async function signIn(deps: Deps, input: SignInInput): Promise<{ cookie: string; circle: Circle; member: Member }> {
+export async function signIn(
+  deps: Deps,
+  input: SignInInput,
+): Promise<{ cookie: string; circle: Circle; member: Member }> {
   const circle = await findCircleByCode(deps.store, input.code);
   if (!circle) throw new AppError('NOT_FOUND', 'We could not find a circle with that code. Check it and try again.');
   const member = await checkPasscode(deps, circle, input.memberId, input.passcode);
   return { cookie: sessionCookieFor(deps, circle, member), circle, member };
 }
 
+/** A fresh session cookie for this member. */
 export function sessionCookieFor(deps: Deps, circle: Circle, member: Member): string {
   return issueSession(deps.config, deps.clock.now(), { circleId: circle.id, memberId: member.id, role: member.role });
 }
 
 /** Replaces a member's passcode after checking the current one. Clears the "must change" flag. */
-export async function changePasscode(deps: Deps, who: MemberContext, input: { current: string; passcode: string }): Promise<void> {
+export async function changePasscode(
+  deps: Deps,
+  who: MemberContext,
+  input: { current: string; passcode: string },
+): Promise<void> {
   if (input.current === input.passcode) {
-    throw new AppError('VALIDATION', 'Choose a new passcode.', { passcode: 'Choose a passcode different from the current one.' });
+    throw new AppError('VALIDATION', 'Choose a new passcode.', {
+      passcode: 'Choose a passcode different from the current one.',
+    });
   }
   await checkPasscode(deps, who.circle, who.member.id, input.current);
   await deps.store.update(paths.member(who.circle.id, who.member.id), {

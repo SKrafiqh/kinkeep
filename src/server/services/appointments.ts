@@ -18,6 +18,7 @@ export function appointmentWhen(at: number, circle: Circle): string {
   return `${formatDay(at, circle.timeZone)} ${formatTime(at, circle.timeZone)}`;
 }
 
+/** One appointment of a circle, or a NOT_FOUND error. */
 export async function getAppointment(deps: Deps, circleId: string, appointmentId: string): Promise<Appointment> {
   const appointment = await deps.store.get<Appointment>(paths.appointment(circleId, appointmentId));
   if (!appointment) throw notFound('appointment');
@@ -53,7 +54,12 @@ export async function createAppointment(deps: Deps, who: MemberContext, input: A
 }
 
 /** Saves an edit. Moving the time starts the reminders again. */
-export async function updateAppointment(deps: Deps, who: MemberContext, appointmentId: string, input: AppointmentInput): Promise<Appointment> {
+export async function updateAppointment(
+  deps: Deps,
+  who: MemberContext,
+  appointmentId: string,
+  input: AppointmentInput,
+): Promise<Appointment> {
   const path = paths.appointment(who.circle.id, appointmentId);
   const details = fields(input, who.circle);
   const now = deps.clock.now();
@@ -63,7 +69,12 @@ export async function updateAppointment(deps: Deps, who: MemberContext, appointm
     if (!before) throw notFound('appointment');
     const changedTime = details.at !== before.at;
     const remindersSent = changedTime ? NOT_SENT : before.remindersSent;
-    const next: Appointment = { ...before, ...details, remindersSent, nextReminderAt: nextAppointmentReminderAt({ at: details.at, remindersSent }, now) };
+    const next: Appointment = {
+      ...before,
+      ...details,
+      remindersSent,
+      nextReminderAt: nextAppointmentReminderAt({ at: details.at, remindersSent }, now),
+    };
     tx.set(path, next);
     return { after: next, moved: changedTime };
   });
@@ -76,6 +87,7 @@ export async function updateAppointment(deps: Deps, who: MemberContext, appointm
   return after;
 }
 
+/** Deletes an appointment and records who did it. */
 export async function deleteAppointment(deps: Deps, who: MemberContext, appointmentId: string): Promise<void> {
   const appointment = await getAppointment(deps, who.circle.id, appointmentId);
   await deps.store.delete(paths.appointment(who.circle.id, appointmentId));

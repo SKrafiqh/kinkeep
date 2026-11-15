@@ -16,24 +16,31 @@ async function load(token: string): Promise<ActionPreview | string> {
   }
 }
 
+function LinkUnusable({ reason }: { reason: string }) {
+  return (
+    <PublicShell>
+      <div className="grid justify-items-start gap-4">
+        <h1>This link cannot be used</h1>
+        <p>{reason}</p>
+        <Link href="/join" className="btn btn-primary">
+          Sign in to the circle
+        </Link>
+      </div>
+    </PublicShell>
+  );
+}
+
 /** Where a one-tap email link lands. Loading this page changes nothing; only the buttons do. */
-export default async function ActPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ do?: string }> }) {
+export default async function ActPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ do?: string }>;
+}) {
   const [{ token }, { do: intent }] = await Promise.all([params, searchParams]);
   const preview = await load(token);
-
-  if (typeof preview === 'string') {
-    return (
-      <PublicShell>
-        <div className="grid justify-items-start gap-4">
-          <h1>This link cannot be used</h1>
-          <p>{preview}</p>
-          <Link href="/join" className="btn btn-primary">
-            Sign in to the circle
-          </Link>
-        </div>
-      </PublicShell>
-    );
-  }
+  if (typeof preview === 'string') return <LinkUnusable reason={preview} />;
 
   return (
     <PublicShell>

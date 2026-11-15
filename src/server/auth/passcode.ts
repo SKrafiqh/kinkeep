@@ -28,7 +28,12 @@ export async function newPasscodeFields(
 }
 
 /** Constant-time check of a passcode against a stored hash. */
-export async function verifyPasscode(passcode: string, salt: string, expectedHash: string, pepper: string): Promise<boolean> {
+export async function verifyPasscode(
+  passcode: string,
+  salt: string,
+  expectedHash: string,
+  pepper: string,
+): Promise<boolean> {
   const actual = Buffer.from(await hashPasscode(passcode, salt, pepper), 'hex');
   const expected = Buffer.from(expectedHash, 'hex');
   return actual.length === expected.length && timingSafeEqual(actual, expected);

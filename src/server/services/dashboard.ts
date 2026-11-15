@@ -8,11 +8,12 @@ import {
   type MedicineAdherence,
 } from '@/domain/adherence';
 import type { Activity, Appointment, Circle } from '@/domain/types';
-import { DAY_MS } from '@/lib/constants';
+import { DAY_MS, WEEK_MS } from '@/lib/constants';
 import type { Deps } from '../deps';
 import { listActivity, listAppointments, listDoses } from '../repos/queries';
 
 const FEED_LENGTH = 20;
+const MONTH_DAYS = 30;
 
 export interface Dashboard {
   week: AdherenceStat;
@@ -27,12 +28,12 @@ export interface Dashboard {
 export async function circleDashboard(deps: Deps, circle: Circle): Promise<Dashboard> {
   const now = deps.clock.now();
   const [doses, appointments, activity] = await Promise.all([
-    listDoses(deps.store, circle.id, now - 30 * DAY_MS, now),
+    listDoses(deps.store, circle.id, now - MONTH_DAYS * DAY_MS, now),
     listAppointments(deps.store, circle.id),
     listActivity(deps.store, circle.id, FEED_LENGTH),
   ]);
   return {
-    week: adherenceOf(inWindow(doses, now - 7 * DAY_MS, now)),
+    week: adherenceOf(inWindow(doses, now - WEEK_MS, now)),
     month: adherenceOf(doses),
     byMedicine: adherenceByMedicine(doses),
     strip: dayStrip(doses, now, circle.timeZone),

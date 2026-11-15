@@ -1,6 +1,6 @@
 import { HOUR_MS, MATERIALISE_HOURS, MINUTE_MS } from '@/lib/constants';
 import { addDays, localDate, weekdayOf, zonedToInstant } from './time';
-import type { DoseEvent, Medication, ReminderSettings } from './types';
+import type { Circle, DoseEvent, Medication, ReminderSettings } from './types';
 
 export interface PlannedDose {
   date: string;
@@ -68,16 +68,17 @@ export interface MaterialisationPlan {
 
 /** Future dose events a medicine still needs, up to 36 hours ahead. Never plans the past. */
 export function planMaterialisation(
-  circleId: string,
+  circle: Pick<Circle, 'id' | 'timeZone' | 'settings'>,
   med: Medication,
-  timeZone: string,
-  settings: ReminderSettings,
   now: number,
 ): MaterialisationPlan {
   if (!med.active) return { events: [], materialisedUntil: null };
+  const { timeZone } = circle;
   const until = now + MATERIALISE_HOURS * HOUR_MS;
   const after = Math.max(med.materialisedUntil ?? now, now);
-  const events = expandDoses(med, timeZone, after, until).map((dose) => buildDoseEvent(circleId, med, dose, settings));
+  const events = expandDoses(med, timeZone, after, until).map((dose) =>
+    buildDoseEvent(circle.id, med, dose, circle.settings),
+  );
   const finished = med.endDate !== null && localDate(until, timeZone) > med.endDate;
   return { events, materialisedUntil: finished ? null : until };
 }

@@ -1,6 +1,6 @@
 import type { Activity, Appointment, Circle, DoseEvent, Medication, Member } from '@/domain/types';
 import { circleIdOf, groups, paths } from './paths';
-import type { DocStore } from './store';
+import type { DocStore, Query } from './store';
 
 export interface InCircle<T> {
   circleId: string;
@@ -13,14 +13,17 @@ const due = (field: string, now: number, limit: number) => ({
   limit,
 });
 
-async function dueInGroup<T>(store: DocStore, group: string, field: string, now: number, limit: number): Promise<InCircle<T>[]> {
-  const found = await store.listGroup<T>(group, due(field, now, limit));
+async function dueInGroup<T>(store: DocStore, group: string, query: Query): Promise<InCircle<T>[]> {
+  const found = await store.listGroup<T>(group, query);
   return found.map(({ path, data }) => ({ circleId: circleIdOf(path), item: data }));
 }
 
 /** The circle with this join code, if any. */
 export async function findCircleByCode(store: DocStore, code: string): Promise<Circle | null> {
-  const [circle] = await store.list<Circle>(paths.circles, { where: [{ field: 'code', op: '==', value: code }], limit: 1 });
+  const [circle] = await store.list<Circle>(paths.circles, {
+    where: [{ field: 'code', op: '==', value: code }],
+    limit: 1,
+  });
   return circle ?? null;
 }
 
@@ -30,6 +33,7 @@ export async function listMembers(store: DocStore, circleId: string): Promise<Me
   return members.filter((member) => member.removedAt === null).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Every medicine of a circle, by name. */
 export async function listMedications(store: DocStore, circleId: string): Promise<Medication[]> {
   const medications = await store.list<Medication>(paths.medications(circleId));
   return medications.sort((a, b) => a.name.localeCompare(b.name));
@@ -46,6 +50,7 @@ export function listDoses(store: DocStore, circleId: string, from: number, to: n
   });
 }
 
+/** Every appointment of a circle, earliest first. */
 export async function listAppointments(store: DocStore, circleId: string): Promise<Appointment[]> {
   const appointments = await store.list<Appointment>(paths.appointments(circleId));
   return appointments.sort((a, b) => a.at - b.at);
@@ -58,18 +63,20 @@ export function listActivity(store: DocStore, circleId: string, limit: number): 
 
 /** Dose events, in any circle, that the reminder engine must look at now. */
 export function dueDoses(store: DocStore, now: number, limit: number): Promise<InCircle<DoseEvent>[]> {
-  return dueInGroup(store, groups.doses, 'nextActionAt', now, limit);
+  return dueInGroup(store, groups.doses, due('nextActionAt', now, limit));
 }
 
+/** Appointments, in any circle, with a reminder due now. */
 export function dueAppointments(store: DocStore, now: number, limit: number): Promise<InCircle<Appointment>[]> {
-  return dueInGroup(store, groups.appointments, 'nextReminderAt', now, limit);
+  return dueInGroup(store, groups.appointments, due('nextReminderAt', now, limit));
 }
 
 /** Medicines whose materialised horizon ends before `horizon`. */
 export function medicationsToTopUp(store: DocStore, horizon: number, limit: number): Promise<InCircle<Medication>[]> {
-  return dueInGroup(store, groups.medications, 'materialisedUntil', horizon, limit);
+  return dueInGroup(store, groups.medications, due('materialisedUntil', horizon, limit));
 }
 
+/** Circles whose weekly summary is due now. */
 export function circlesDueSummary(store: DocStore, now: number, limit: number): Promise<Circle[]> {
   return store.list<Circle>(paths.circles, due('nextSummaryAt', now, limit));
 }
