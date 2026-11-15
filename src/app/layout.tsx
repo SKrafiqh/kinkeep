@@ -1,22 +1,16 @@
 import type { Metadata, Viewport } from 'next';
-import { Atkinson_Hyperlegible, Fraunces } from 'next/font/google';
+import { Atkinson_Hyperlegible_Next } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Announcer } from '@/components/Announcer';
 import { APP_NAME } from '@/lib/constants';
 import './globals.css';
 
-// A typeface designed for low-vision readers, self-hosted at build time.
-const atkinson = Atkinson_Hyperlegible({
+// One calm family designed for low-vision readers, self-hosted at build time. Headings, times and body share it.
+const atkinson = Atkinson_Hyperlegible_Next({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['300', '400', '500', '600', '700'],
+  style: ['normal', 'italic'],
   variable: '--font-atkinson',
-  display: 'swap',
-});
-
-// A soft, high-contrast serif for headings and times. Body text stays in Atkinson.
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-fraunces',
   display: 'swap',
 });
 
@@ -33,7 +27,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${atkinson.variable} ${fraunces.variable}`}>
+    <html lang="en" className={atkinson.variable}>
       <body>
         <a href="#main" className="skip-link">
           Skip to main content

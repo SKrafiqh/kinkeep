@@ -1,14 +1,29 @@
 import { DoseSlotCard } from '@/components/DoseSlotCard';
+import { CheckCircleIcon, EnvelopeSimpleIcon } from '@/components/icons';
 
-/** Two real slot cards, offset like papers on a table, so the first screen shows the product itself. */
+/**
+ * The product itself, floating: a real Today slot, the reminder email that came before it,
+ * and the note that nobody else was told. Decorative duplication, so screen readers get one sentence.
+ */
 export function TodayPreview() {
   return (
-    <div className="today relative mx-auto max-w-3xl">
+    <div className="float-stage rise rise-3">
       <p className="sr-only">
-        Example of the Today page: three medicines at 8:00 am marked as taken, and one due at 8:00 pm.
+        Example: an 8:00 am reminder email listing three medicines with an I took them button, the Today page showing
+        all three marked as taken, and a note that nobody else was emailed.
       </p>
       <div aria-hidden>
-        <div className="rise rise-3">
+        <div className="float-mail glass float-lift">
+          <p className="flex items-center gap-2 font-semibold">
+            <EnvelopeSimpleIcon weight="duotone" size={24} className="shrink-0 text-primary" />
+            Your 8:00 am medicines (3)
+          </p>
+          <p className="text-[0.889rem] text-muted">Metformin, Amlodipine, Aspirin</p>
+          <span className="btn btn-primary pointer-events-none min-h-11 justify-self-start px-5 text-[0.889rem]">
+            I took them
+          </span>
+        </div>
+        <div className="float-slot">
           <DoseSlotCard
             slotTime="8:00 am"
             doses={[
@@ -18,12 +33,10 @@ export function TodayPreview() {
             ]}
           />
         </div>
-        <div className="rise rise-4 -mt-4 ml-6 sm:ml-16">
-          <DoseSlotCard
-            slotTime="8:00 pm"
-            doses={[{ id: 'd', medName: 'Atorvastatin', strength: '10 mg', view: 'upcoming' }]}
-          />
-        </div>
+        <p className="float-chip glass float-lift">
+          <CheckCircleIcon weight="fill" size={24} className="shrink-0 text-taken" />
+          Taken at 8:02 am · nobody else was emailed
+        </p>
       </div>
     </div>
   );

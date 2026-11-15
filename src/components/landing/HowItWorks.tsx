@@ -7,20 +7,20 @@ export function HowItWorks() {
         <p className="kicker">
           <b>02</b> How it works
         </p>
-        <h2 id="how-title" className="text-[2.3rem] sm:text-[3.2rem]">
+        <h2 id="how-title" className="section-title">
           What happens around an 8:00 dose
         </h2>
-        <p className="max-w-[30rem]">
+        <p className="max-w-[30rem] text-muted">
           Remind the elder first. Bring in others only when a dose stays unconfirmed, and only the people the elder
           chose.
         </p>
       </div>
-      <ol className="stem glass rounded-card p-7 pl-16 sm:p-10 sm:pl-20">
+      <ol className="stem pt-2">
         {STEPS.map((step) => (
           <li key={step.time}>
-            <p className="display text-[2.2rem] sm:text-[2.6rem]">{step.time}</p>
-            <h3 className="text-[1.25rem]">{step.title}</h3>
-            <p className="max-w-[32rem]">{step.text}</p>
+            <p className="display text-[1.8rem] text-primary-dark">{step.time}</p>
+            <h3 className="text-[1.15rem]">{step.title}</h3>
+            <p className="max-w-[32rem] text-muted">{step.text}</p>
           </li>
         ))}
       </ol>

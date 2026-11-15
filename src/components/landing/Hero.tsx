@@ -1,24 +1,24 @@
 import Link from 'next/link';
-import { Canopy } from '@/components/Canopy';
 import { DemoButton } from '@/components/DemoButton';
+import { TodayPreview } from './TodayPreview';
 
+/** Words on the left, the product itself floating on the right, over a soft morning aurora. */
 export function Hero() {
   return (
     <section
-      className="sky-window mt-6 grid min-h-[min(46rem,88dvh)] place-items-center px-5 py-24 text-center"
+      className="aurora grid items-center gap-12 pt-14 pb-4 sm:pt-20 sm:pb-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:pb-24"
       aria-labelledby="hero-title"
     >
-      <Canopy id="hero" />
-      <div className="relative grid max-w-3xl justify-items-center gap-6">
+      <div className="grid justify-items-start gap-6">
         <p className="kicker rise">For one person, and everyone who looks out for them</p>
-        <h1 id="hero-title" className="rise rise-1 text-[2.9rem] leading-[1.04] sm:text-[4.8rem]">
-          The care circle the <em className="text-primary">elder</em> runs.
+        <h1 id="hero-title" className="hero-title rise rise-1">
+          The care circle the <em>elder</em> runs.
         </h1>
-        <p className="rise rise-2 max-w-[34rem] text-[1.2rem]">
+        <p className="rise rise-2 max-w-[32rem] text-[1.1rem] text-muted">
           Medicines, appointments and email reminders shared by the family, with the elder deciding who sees and changes
           what.
         </p>
-        <div className="rise rise-3 flex flex-wrap justify-center gap-3">
+        <div className="rise rise-3 flex flex-wrap gap-3">
           <Link href="/create" className="btn btn-primary">
             Create a circle
           </Link>
@@ -30,6 +30,7 @@ export function Hero() {
           <DemoButton />
         </div>
       </div>
+      <TodayPreview />
     </section>
   );
 }

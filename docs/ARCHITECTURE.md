@@ -13,7 +13,7 @@
 | Secrets | Secret Manager | Nothing sensitive in the repo or the image |
 | Build | Cloud Build (`gcloud run deploy --source .`) | No local Docker needed |
 | Logs | Cloud Logging, structured JSON on stdout | No agent or SDK needed |
-| UI | Tailwind CSS, Atkinson Hyperlegible (Google Fonts) | Typeface designed for low-vision readers |
+| UI | Tailwind CSS, Atkinson Hyperlegible Next (Google Fonts) | Typeface designed for low-vision readers |
 | Quality | Zod, ESLint, Vitest, Playwright + axe, GitHub Actions | Validation, lint, tests, accessibility gate, CI |
 
 Google services in use: Cloud Run, Firestore, Cloud Scheduler, Secret Manager,

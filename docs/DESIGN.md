@@ -18,15 +18,22 @@ A member's role sets the default landing page: elder → `/today`, others → `/
 
 ## 2. Tokens
 
-Typography — Atkinson Hyperlegible, loaded through the framework's Google Fonts
-integration (self-hosted at build time, no runtime request to Google).
+Typography — one calm family, Atkinson Hyperlegible Next (weights 300 to 700, with
+italic), loaded through the framework's Google Fonts integration (self-hosted at build
+time, no runtime request to Google). Headings and display numerals (dose times, figures)
+use weight 500 with slight negative tracking and tabular figures; body text 400; labels,
+buttons and emphasis 600. The app UI uses nothing heavier than 600 and no second typeface.
 
 | Token | Circle | Today |
 | --- | --- | --- |
-| Body | 18 px / 1.6 | 22 px / 1.6 |
-| Label | 16 px, weight 700 | 20 px, weight 700 |
-| Heading 2 | 24 px | 30 px |
-| Heading 1 | 32 px | 40 px |
+| Body | 18 px / 1.6, weight 400 | 20 px / 1.6, weight 400 |
+| Label | 16 px, weight 600 | 18 px, weight 600 |
+| Heading 2 | 22.5 px, weight 500 | 25 px, weight 500 |
+| Heading 1 | 29 px, weight 500 | 34 px, weight 500 |
+
+Surfaces — light liquid glass: panes are 62% white with a backdrop blur, a hairline edge
+and a soft tinted shadow, and stay solid white where blur is unsupported. Use a pane only
+where it groups something (a slot, a form); landing sections sit straight on the page.
 
 Colour — define as CSS variables; check every pair with a contrast tool before use.
 

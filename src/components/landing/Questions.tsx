@@ -8,12 +8,14 @@ export function Questions() {
         <p className="kicker">
           <b>03</b> Questions
         </p>
-        <h2 id="faq-title" className="text-[2.3rem] sm:text-[3.2rem]">
+        <h2 id="faq-title" className="section-title">
           What families ask first
         </h2>
-        <div className="card mt-4 grid justify-items-start gap-3 p-7">
-          <p className="text-[1.15rem] font-bold">See it working in a minute.</p>
-          <p>The demo is a sample circle with a month of history and a dose due in a few minutes.</p>
+        <div className="mt-4 grid max-w-[28rem] justify-items-start gap-2 border-t border-ink/10 pt-6">
+          <p className="font-semibold">See it working in a minute.</p>
+          <p className="text-muted">
+            The demo is a sample circle with a month of history and a dose due in a few minutes.
+          </p>
           <DemoButton />
         </div>
       </div>
@@ -21,7 +23,7 @@ export function Questions() {
         {QUESTIONS.map((item) => (
           <details key={item.q} className="index-row index-row--question">
             <summary>
-              <span className="text-[1.25rem] font-bold">{item.q}</span>
+              <span className="text-[1.15rem] font-medium">{item.q}</span>
               <span className="plus" aria-hidden />
             </summary>
             <p className="max-w-[40rem] px-2 pb-7">{item.a}</p>

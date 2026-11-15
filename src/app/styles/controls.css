@@ -9,7 +9,7 @@
     border: 2px solid transparent;
     border-radius: var(--radius-btn);
     font-size: var(--fs-body);
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
     text-align: center;
     cursor: pointer;
@@ -86,7 +86,7 @@
 
   .link {
     color: var(--color-primary);
-    font-weight: 700;
+    font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 4px;
   }
@@ -94,7 +94,7 @@
   .label {
     display: block;
     font-size: var(--fs-label);
-    font-weight: 700;
+    font-weight: 600;
   }
 
   .hint {
@@ -134,7 +134,7 @@
     gap: 6px;
     color: var(--color-missed);
     font-size: var(--fs-label);
-    font-weight: 700;
+    font-weight: 600;
   }
 
   .passcode-box {
@@ -146,7 +146,7 @@
     border: 2px solid var(--color-control);
     border-radius: var(--radius-inner);
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 600;
     text-align: center;
   }
 
@@ -160,7 +160,7 @@
     background: var(--color-surface);
     border: 2px solid var(--color-control);
     border-radius: var(--radius-btn);
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
   }

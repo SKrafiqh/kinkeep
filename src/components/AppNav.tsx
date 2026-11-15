@@ -17,7 +17,7 @@ export function AppNav({ isElder }: { isElder: boolean }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="no-print">
-      <ul className="dock">
+      <ul className="dock glass">
         {LINKS.filter((link) => isElder || !link.elderOnly).map(({ href, label, Icon }) => (
           <li key={href}>
             <Link href={href} className="tab" aria-current={pathname.startsWith(href) ? 'page' : undefined}>

@@ -6,7 +6,6 @@ import { HowItWorks } from '@/components/landing/HowItWorks';
 import { LandingNav } from '@/components/landing/LandingNav';
 import { Questions } from '@/components/landing/Questions';
 import { Roles } from '@/components/landing/Roles';
-import { TodayPreview } from '@/components/landing/TodayPreview';
 import { Why } from '@/components/landing/Why';
 
 export default function LandingPage() {
@@ -16,9 +15,6 @@ export default function LandingPage() {
         <LandingNav />
         <main id="main" tabIndex={-1}>
           <Hero />
-          <div className="-mt-16 px-2 sm:-mt-24">
-            <TodayPreview />
-          </div>
           <Why />
           <Features />
           <HowItWorks />

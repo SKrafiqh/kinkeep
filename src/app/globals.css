@@ -30,7 +30,9 @@
   --color-sky: #dcebe6;
   --color-glow: #f6d9a4;
   --font-sans: var(--font-atkinson), Verdana, Arial, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+  --font-display: var(--font-atkinson), Verdana, Arial, sans-serif;
+  /* Emphasis is semibold: Atkinson Hyperlegible Next at 700 reads heavy at these sizes. */
+  --font-weight-bold: 600;
   --radius-card: 28px;
   --radius-btn: 999px;
   --radius-inner: 16px;

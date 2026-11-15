@@ -7,7 +7,7 @@
     padding: 12px 20px;
     background: var(--color-ink);
     color: var(--color-surface);
-    font-weight: 700;
+    font-weight: 600;
     border-radius: var(--radius-btn);
   }
 
@@ -16,42 +16,29 @@
   }
 
   /*
-   * Liquid glass, kept legible: a frosted pane over the sky, a bright 1px top edge that
-   * reads as refraction, and a tinted shadow. The pane stays 70%+ white so text keeps 7:1.
+   * Liquid glass, kept light: a frosted pane, a hairline edge, a bright 1px top highlight
+   * that reads as refraction, and a soft tinted shadow. The blur evens out what sits
+   * behind, so muted text (#3f4f56) keeps well over 4.5:1 and ink keeps 7:1.
    */
-  .glass {
-    background: rgb(255 255 255 / 0.74);
-    border: 1px solid rgb(255 255 255 / 0.95);
+  .glass,
+  .card {
+    background: rgb(255 255 255 / 0.62);
+    border: 1px solid rgb(22 38 46 / 0.06);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 1),
-      inset 0 -1px 0 rgb(15 92 92 / 0.08),
-      0 1px 2px rgb(15 70 70 / 0.06),
-      0 22px 44px -26px rgb(15 70 70 / 0.42);
-    -webkit-backdrop-filter: blur(18px) saturate(1.5);
-    backdrop-filter: blur(18px) saturate(1.5);
-  }
-
-  @supports not (backdrop-filter: blur(1px)) {
-    .glass {
-      background: var(--color-surface);
-    }
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 1px 2px rgb(15 70 70 / 0.04),
+      0 18px 40px -28px rgb(15 70 70 / 0.28);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
   }
 
   .card {
-    background: rgb(255 255 255 / 0.74);
-    border: 1px solid rgb(255 255 255 / 0.95);
     border-radius: var(--radius-card);
     padding: 24px;
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 1),
-      inset 0 -1px 0 rgb(15 92 92 / 0.08),
-      0 1px 2px rgb(15 70 70 / 0.06),
-      0 22px 44px -26px rgb(15 70 70 / 0.42);
-    -webkit-backdrop-filter: blur(18px) saturate(1.5);
-    backdrop-filter: blur(18px) saturate(1.5);
   }
 
   @supports not (backdrop-filter: blur(1px)) {
+    .glass,
     .card {
       background: var(--color-surface);
     }

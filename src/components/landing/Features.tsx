@@ -6,14 +6,14 @@ export function Features() {
       <p className="kicker">
         <b>01</b> What it does
       </p>
-      <h2 id="features-title" className="mt-3 max-w-[40rem] text-[2.3rem] sm:text-[3.2rem]">
+      <h2 id="features-title" className="section-title mt-3 max-w-[40rem]">
         Six things, each done plainly
       </h2>
       <div className="mt-10">
         {FEATURES.map((feature, index) => (
           <details key={feature.title} className="index-row" open={index === 0}>
             <summary>
-              <span className="display text-[1.4rem] text-accent" aria-hidden>
+              <span className="display text-[1.1rem] text-accent" aria-hidden>
                 {String(index + 1).padStart(2, '0')}
               </span>
               <span className="index-title">{feature.title}</span>

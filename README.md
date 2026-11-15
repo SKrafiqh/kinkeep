@@ -78,6 +78,8 @@ retried after 5 minutes, up to three times per stage. The stage machine itself i
 | `src/components/` | Presentational React components |
 | `tests/unit`, `tests/api` | Vitest, against in-memory fakes, no network |
 
+Why it is built this way: [architecture decision records](docs/adr/README.md).
+
 ## Google services
 
 | Service | Where |
@@ -88,7 +90,7 @@ retried after 5 minutes, up to three times per stage. The stage machine itself i
 | Secret Manager | secrets injected at deploy, see `docs/SETUP.md` |
 | Cloud Build, Cloud Logging | `gcloud run deploy --source`, structured logs in `src/lib/logger.ts` |
 | Gmail | `src/server/email/gmailSender.ts` |
-| Google Fonts | Atkinson Hyperlegible via `next/font`, `src/app/layout.tsx` |
+| Google Fonts | Atkinson Hyperlegible Next via `next/font`, `src/app/layout.tsx` |
 
 ## Run it
 
@@ -132,7 +134,7 @@ emails a day. This is not a medical device.
 
 ## Accessibility
 
-Atkinson Hyperlegible type at 18 px and above, 48 px targets (56 px on Today), status shown by
+Atkinson Hyperlegible Next type at 18 px and above, 48 px targets (56 px on Today), status shown by
 icon, word and colour together, visible focus rings, a skip link, labelled fields with linked
 errors, a polite live region, and `prefers-reduced-motion` respected. Target: WCAG 2.2 AA, with
 AAA contrast on Today.
