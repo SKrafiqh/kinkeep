@@ -10,7 +10,7 @@ interface Props {
 /** Says what belongs on an empty list and offers the first step. */
 export function EmptyState({ title, children, action }: Props) {
   return (
-    <div className="card grid justify-items-start gap-3 border-dashed">
+    <div className="card rise grid justify-items-start gap-3">
       <h2>{title}</h2>
       <p className="max-w-prose text-muted">{children}</p>
       {action ? (

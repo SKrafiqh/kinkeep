@@ -93,7 +93,8 @@ function createRoute<Body>(options: RouteOptions<Body>, handle: (context: RouteC
       const deps = getDeps();
       const now = deps.clock.now();
       if (!options.skipOriginCheck) assertSameOrigin(request, deps.config);
-      const params = await context.params;
+      // Next.js passes no params object at all to a route without dynamic segments.
+      const params = (await context.params) ?? {};
       if (Object.values(params).some((value) => !ID_PATTERN.test(value))) throw new AppError('NOT_FOUND', 'We could not find that.');
       if (options.rateLimit && !allowRequest(limitKey(request, params), options.rateLimit, now)) {
         throw new AppError('RATE_LIMITED', 'That was a lot of tries. Please wait a minute and try again.');

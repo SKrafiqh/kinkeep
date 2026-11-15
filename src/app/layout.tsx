@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Atkinson_Hyperlegible } from 'next/font/google';
+import { Atkinson_Hyperlegible, Fraunces } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Announcer } from '@/components/Announcer';
 import { APP_NAME } from '@/lib/constants';
@@ -10,6 +10,13 @@ const atkinson = Atkinson_Hyperlegible({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-atkinson',
+  display: 'swap',
+});
+
+// A soft, high-contrast serif for headings and times. Body text stays in Atkinson.
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
   display: 'swap',
 });
 
@@ -26,7 +33,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={atkinson.variable}>
+    <html lang="en" className={`${atkinson.variable} ${fraunces.variable}`}>
       <body>
         <a href="#main" className="skip-link">
           Skip to main content

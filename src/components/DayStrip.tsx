@@ -17,7 +17,7 @@ export function DayStrip({ days }: { days: DayMark[] }) {
         const { words, className, Icon } = MARKS[day.state];
         const [weekday] = formatDate(day.date).split(' ');
         return (
-          <li key={day.date} className="grid justify-items-center gap-1 rounded-btn border border-line bg-surface px-1 py-2">
+          <li key={day.date} className="grid justify-items-center gap-1 rounded-inner border border-line bg-surface px-1 py-2">
             <span className="text-[0.8rem] font-bold" aria-hidden>
               {weekday}
             </span>

@@ -12,12 +12,12 @@ const LINKS = [
   { href: '/members', label: 'Members', Icon: UsersThreeIcon, elderOnly: true },
 ];
 
-/** The main sections as notebook index tabs. The current one is marked for screen readers too. */
+/** The main sections as a floating glass dock. The current one is marked for screen readers too. */
 export function AppNav({ isElder }: { isElder: boolean }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="no-print">
-      <ul className="flex flex-wrap gap-x-1 gap-y-2">
+      <ul className="dock">
         {LINKS.filter((link) => isElder || !link.elderOnly).map(({ href, label, Icon }) => (
           <li key={href}>
             <Link href={href} className="tab" aria-current={pathname.startsWith(href) ? 'page' : undefined}>
