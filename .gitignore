@@ -1,0 +1,21 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+playwright-report/
+test-results/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*service-account*.json
+
+# Not source
+.DS_Store
+*.zip
+.claude/
+.vercel/
