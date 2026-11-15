@@ -1,8 +1,9 @@
 import { DoseSlotCard, type SlotDose } from '@/components/DoseSlotCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ReadAloud } from '@/components/ReadAloud';
 import { SlotActions } from '@/components/SlotActions';
 import { TestReminderForm } from '@/components/TestReminderForm';
-import { doseView } from '@/domain/escalation';
+import { doseView, type DoseView } from '@/domain/escalation';
 import { can } from '@/domain/permissions';
 import { formatDate, formatTime, zonedParts } from '@/domain/time';
 import type { DoseEvent } from '@/domain/types';
@@ -32,6 +33,22 @@ function toSlots(doses: DoseEvent[], now: number, timeZone: string): Slot[] {
   });
 }
 
+const SPOKEN: Record<DoseView, string> = {
+  upcoming: 'due',
+  due: 'due now',
+  late: 'late',
+  missed: 'missed',
+  taken: 'taken',
+  'taken-late': 'taken late',
+  skipped: 'skipped',
+};
+
+/** What Read aloud says: the same facts as the screen, as sentences. */
+function spokenDay(title: string, date: string, slots: Slot[], progress: string): string {
+  const parts = slots.map((slot) => `At ${slot.time}: ${slot.doses.map((dose) => `${dose.medName} ${dose.strength}, ${SPOKEN[dose.view]}`).join('; ')}.`);
+  return [`${title}.`, `${formatDate(date)}.`, progress, ...(parts.length > 0 ? parts : ['No medicines are due today.'])].join(' ');
+}
+
 function greeting(hour: number): string {
   if (hour < 12) return 'Good morning';
   return hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -48,15 +65,19 @@ export default async function TodayPage() {
   const nextKey = slots.find((slot) => slot.actionId !== null)?.key;
   const taken = doses.filter((dose) => dose.status === 'taken').length;
   const title = member.role === 'elder' ? `${greeting(zonedParts(now, circle.timeZone).hour)}, ${member.name}` : `${circle.elderName}’s medicines today`;
+  const progress = doses.length > 0 ? `${taken} of ${doses.length} taken so far.` : '';
 
   return (
     <div className="today grid gap-6">
-      <div>
-        <h1>{title}</h1>
-        <p>
-          {formatDate(date)}
-          {doses.length > 0 ? `. ${taken} of ${doses.length} taken so far.` : ''}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1>{title}</h1>
+          <p>
+            {formatDate(date)}
+            {progress ? `. ${progress}` : ''}
+          </p>
+        </div>
+        <ReadAloud text={spokenDay(title, date, slots, progress)} />
       </div>
       {slots.length === 0 ? (
         <EmptyState title="No medicines are due today" action={can(member.role, 'medication:write') ? { href: '/medications/new', label: 'Add a medicine' } : undefined}>

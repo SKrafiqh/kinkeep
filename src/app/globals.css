@@ -545,9 +545,11 @@
     line-height: 1;
   }
 
-  /* Staggered entry: content settles in from slightly below. Reduced motion removes it. */
+  /* Staggered entry, played once: content settles in from slightly below. Only for people who have not asked for less motion. */
   .rise {
-    animation: rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    @media (prefers-reduced-motion: no-preference) {
+      animation: rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
   }
 
   .rise-1 {
@@ -566,9 +568,297 @@
     animation-delay: 0.42s;
   }
 
-  .sway {
-    transform-origin: 100% 0;
-    animation: sway 9s ease-in-out infinite alternate;
+  /* ---------- Landing layout, after the canopy template ---------- */
+
+  .wrap {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 48px);
+  }
+
+  /* A floating glass pill that stays at the top while the page scrolls. */
+  .nav-pill {
+    position: sticky;
+    top: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px 6px 18px;
+    border-radius: 999px;
+  }
+
+  .nav-links {
+    display: none;
+    margin-inline: auto;
+    gap: 2px;
+  }
+
+  @media (min-width: 64em) {
+    .nav-links {
+      display: flex;
+    }
+  }
+
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: background-color 0.2s;
+  }
+
+  .nav-links a:hover {
+    background: rgb(15 92 92 / 0.1);
+  }
+
+  /*
+   * The canopy window: looking up through leaves into a morning sky. The sky stays pale so
+   * ink text on it keeps 7:1, and a soft glow sits behind the words.
+   */
+  .sky-window {
+    position: relative;
+    overflow: hidden;
+    border-radius: clamp(28px, 4vw, 44px);
+    background:
+      radial-gradient(70% 60% at 50% 46%, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0) 70%),
+      radial-gradient(40% 40% at 80% 18%, rgb(246 205 140 / 0.7), transparent 70%),
+      linear-gradient(180deg, #bcd8e6 0%, #dcebe6 55%, #f4efe4 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 40px 80px -40px rgb(15 70 70 / 0.45);
+  }
+
+  .sky-window > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* On a narrow screen the crop pulls leaves behind the words, so the sky stays clear there. */
+  @media (max-width: 40em) {
+    .sky-window > svg {
+      display: none;
+    }
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+
+  .kicker b {
+    font-family: var(--font-display);
+    font-size: 1.15em;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .statement {
+    font-family: var(--font-display);
+    font-size: clamp(1.7rem, 1.2rem + 2.4vw, 3.4rem);
+    font-weight: 500;
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+    max-width: 22em;
+    text-wrap: balance;
+  }
+
+  /* A figure over a thin rule, like the template's counters. Every figure is a product fact. */
+  .fact {
+    display: grid;
+    gap: 6px;
+    padding-top: 20px;
+    border-top: 2px solid rgb(22 38 46 / 0.18);
+  }
+
+  .fact dd {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 1.8rem + 2.2vw, 3.8rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  /* Numbered index rows that open in place. Native <details>, so it works without script and by keyboard. */
+  .index-row {
+    border-top: 1px solid rgb(22 38 46 / 0.16);
+  }
+
+  .index-row:last-child {
+    border-bottom: 1px solid rgb(22 38 46 / 0.16);
+  }
+
+  .index-row summary {
+    display: grid;
+    grid-template-columns: 3rem 1fr 3rem;
+    align-items: center;
+    gap: 16px;
+    min-height: 56px;
+    padding: clamp(18px, 2.4vw, 28px) 8px;
+    border-radius: 16px;
+    cursor: pointer;
+    list-style: none;
+    transition: background-color 0.25s;
+  }
+
+  .index-row summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .index-row summary:hover {
+    background: rgb(255 255 255 / 0.55);
+  }
+
+  .index-row .index-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.45rem, 1.1rem + 1.6vw, 2.5rem);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+
+  .plus {
+    position: relative;
+    justify-self: end;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--color-control);
+    border-radius: 999px;
+    transition:
+      background-color 0.3s,
+      border-color 0.3s;
+  }
+
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 2px;
+    background: currentColor;
+    translate: -50% -50%;
+  }
+
+  .plus::after {
+    rotate: 90deg;
+    transition: rotate 0.3s;
+  }
+
+  details[open] > summary .plus {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-surface);
+  }
+
+  details[open] > summary .plus::after {
+    rotate: 0deg;
+  }
+
+  .index-body {
+    display: grid;
+    gap: 14px;
+    padding: 0 8px 28px calc(3rem + 24px);
+    max-width: 46rem;
+  }
+
+  @media (max-width: 40em) {
+    .index-row summary {
+      grid-template-columns: 2.2rem 1fr 3rem;
+    }
+
+    .index-body {
+      padding-left: 8px;
+    }
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 12px;
+    border: 1px solid rgb(15 92 92 / 0.35);
+    border-radius: 999px;
+    color: var(--color-primary-dark);
+    font-size: var(--fs-label);
+    font-weight: 700;
+  }
+
+  /* The timeline: a stem with a node at each moment, like the template's growing tree, drawn still. */
+  .stem {
+    position: relative;
+    display: grid;
+    gap: clamp(28px, 4vw, 44px);
+    padding-left: 44px;
+  }
+
+  .stem::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--color-primary), var(--color-accent));
+  }
+
+  .stem > li {
+    position: relative;
+    display: grid;
+    gap: 6px;
+  }
+
+  .stem > li::before {
+    content: '';
+    position: absolute;
+    left: -40px;
+    top: 0.55em;
+    width: 22px;
+    height: 22px;
+    border: 4px solid var(--color-surface);
+    border-radius: 999px;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary);
+  }
+
+  /* The bookend footer: deep green, like the shade under the trees, with the name set large. */
+  .forest {
+    background:
+      radial-gradient(60% 80% at 85% 0%, rgb(20 120 122 / 0.45), transparent 70%),
+      linear-gradient(180deg, #0c3b3b, #072a2a);
+    color: #eef5f1;
+  }
+
+  .forest a {
+    color: #eef5f1;
+  }
+
+  .forest .muted-on-dark {
+    color: #b9d1c9;
+  }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: clamp(4.4rem, 2rem + 14vw, 17rem);
+    font-weight: 600;
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    text-align: center;
+    background: linear-gradient(180deg, #cfe7dd, rgb(207 231 221 / 0.2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    user-select: none;
   }
 }
 
@@ -579,28 +869,42 @@
   }
 }
 
-@keyframes sway {
-  from {
-    transform: rotate(-1.2deg);
-  }
-  to {
-    transform: rotate(1.4deg);
-  }
-}
-
 @keyframes shimmer {
   to {
     background-position: -200% 0;
   }
 }
 
+/* Smooth jumps to sections, and lifting buttons, only for people who have not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
+  .btn:hover,
+  .btn:active {
+    transform: none;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* Windows high-contrast mode drops shadows and backgrounds; keep every pane's edge visible. */
+@media (forced-colors: active) {
+  .glass,
+  .card,
+  .nav-pill,
+  .dock {
+    border: 1px solid CanvasText;
+  }
+
+  .wordmark {
+    background: none;
+    color: CanvasText;
   }
 }
 

@@ -16,6 +16,8 @@ export { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 export { PrinterIcon } from '@phosphor-icons/react/dist/ssr/Printer';
 export { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 export { SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
+export { SpeakerHighIcon } from '@phosphor-icons/react/dist/ssr/SpeakerHigh';
+export { StopIcon } from '@phosphor-icons/react/dist/ssr/Stop';
 export { SunIcon } from '@phosphor-icons/react/dist/ssr/Sun';
 export { UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 export { WarningCircleIcon } from '@phosphor-icons/react/dist/ssr/WarningCircle';

@@ -8,7 +8,7 @@ export function Logo({ href }: { href: string }) {
     <Link href={href} className="inline-flex min-h-12 items-center" aria-label={`${APP_NAME} home`}>
       {/* A plain img on purpose: next/image adds an inline style attribute, which the strict CSP blocks. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.webp" alt={APP_NAME} width={690} height={210} className="h-11 w-auto mix-blend-multiply" />
+      <img src="/logo-ink.webp" alt={APP_NAME} width={690} height={210} className="h-9 w-auto sm:h-11" />
     </Link>
   );
 }
