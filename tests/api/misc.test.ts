@@ -11,6 +11,7 @@ import { POST as addMemberRoute } from '@/app/api/members/route';
 import { POST as passcodeRoute } from '@/app/api/passcode/route';
 import { POST as signInRoute } from '@/app/api/session/route';
 import { POST as testReminderRoute } from '@/app/api/test-reminder/route';
+import { first } from '@/lib/arrays';
 import { MINUTE_MS } from '@/lib/constants';
 import { call, createCircle, createWorld, MEDICINE_INPUT, type World } from './helpers';
 
@@ -39,12 +40,12 @@ async function familyCookie(): Promise<string> {
   });
   const found = await call(lookupRoute, { query: `?code=${code}` });
   const memberId = found.data.members.find((m: { name: string }) => m.name === 'Arjun').id;
-  const first = await call(signInRoute, { body: { code, memberId, passcode: added.data.setupPasscode } });
+  const signedIn = await call(signInRoute, { body: { code, memberId, passcode: added.data.setupPasscode } });
   const changed = await call(passcodeRoute, {
-    cookie: first.cookie,
+    cookie: signedIn.cookie,
     body: { current: added.data.setupPasscode, passcode: '135790' },
   });
-  return changed.cookie ?? (first.cookie as string);
+  return changed.cookie ?? (signedIn.cookie as string);
 }
 
 const today = async (as: string = cookie): Promise<Dose[]> =>
@@ -136,22 +137,21 @@ describe('POST /api/doses/[id]/act', () => {
   });
 
   it('answers 409 when the dose was already marked', async () => {
-    const doses = await twoAtNineOneAtEight();
-    const id = doses[0].id;
+    const { id } = first(await twoAtNineOneAtEight());
     await act(id, { action: 'taken' });
     expect((await act(id, { action: 'taken' })).status).toBe(409);
   });
 
   it('rejects a bad action and unknown fields', async () => {
-    const doses = await twoAtNineOneAtEight();
-    expect((await act(doses[0].id, { action: 'snore' })).status).toBe(400);
-    expect((await act(doses[0].id, { action: 'taken', extra: 1 })).status).toBe(400);
+    const { id } = first(await twoAtNineOneAtEight());
+    expect((await act(id, { action: 'snore' })).status).toBe(400);
+    expect((await act(id, { action: 'taken', extra: 1 })).status).toBe(400);
   });
 
   it('answers 403 to family, 401 to anonymous callers and 404 for an unknown dose', async () => {
-    const doses = await twoAtNineOneAtEight();
-    expect((await act(doses[0].id, { action: 'taken' }, await familyCookie())).status).toBe(403);
-    expect((await call(doseActRoute, { params: { id: doses[0].id }, body: { action: 'taken' } })).status).toBe(401);
+    const { id } = first(await twoAtNineOneAtEight());
+    expect((await act(id, { action: 'taken' }, await familyCookie())).status).toBe(403);
+    expect((await call(doseActRoute, { params: { id }, body: { action: 'taken' } })).status).toBe(401);
     expect((await act('nope', { action: 'taken' })).status).toBe(404);
   });
 });
@@ -181,7 +181,7 @@ describe('POST /api/circles/demo', () => {
   it('gives the session cookie access to the demo data', async () => {
     const { cookie: demoCookie } = await demo();
     const feed = (await call(activityRoute, { cookie: demoCookie })).data as Array<{ summary: string }>;
-    expect(feed[0].summary).toBe('Priya changed Metformin from 500 mg to 1000 mg');
+    expect(first(feed).summary).toBe('Priya changed Metformin from 500 mg to 1000 mg');
   });
 
   it('has a dose due within the next five minutes', async () => {
@@ -193,9 +193,9 @@ describe('POST /api/circles/demo', () => {
   });
 
   it('keeps one demo apart from the next', async () => {
-    const first = await demo();
-    const second = await demo();
-    expect(first.data.code).not.toBe(second.data.code);
+    const firstDemo = await demo();
+    const secondDemo = await demo();
+    expect(firstDemo.data.code).not.toBe(secondDemo.data.code);
     expect((await world.deps.store.list('circles')).length).toBe(3);
   });
 
@@ -225,7 +225,7 @@ describe('POST /api/test-reminder', () => {
     const result = await send();
     expect(result).toMatchObject({ status: 200, data: { withActions: true } });
     expect(world.emails).toHaveLength(1);
-    const [email] = world.emails;
+    const email = first(world.emails);
     expect(email.to).toBe('me@example.com');
     expect(email.text).toContain('Metformin');
     const token = /\/act\/([\w.-]+)/.exec(email.text)?.[1];
@@ -240,14 +240,15 @@ describe('POST /api/test-reminder', () => {
     const result = await send();
     expect(result.data).toEqual({ withActions: false });
     expect(world.emails).toHaveLength(1);
-    expect(world.emails[0].subject).toBe('Your test reminder');
-    expect(world.emails[0].text).not.toContain('/act/');
-    expect(world.emails[0].html).not.toContain('/act/');
+    const email = first(world.emails);
+    expect(email.subject).toBe('Your test reminder');
+    expect(email.text).not.toContain('/act/');
+    expect(email.html).not.toContain('/act/');
   });
 
   it('lowercases the address and rejects an invalid or unknown input', async () => {
     expect((await send({ email: 'ME@Example.COM' })).status).toBe(200);
-    expect(world.emails[0].to).toBe('me@example.com');
+    expect(first(world.emails).to).toBe('me@example.com');
     expect(await send({ email: 'not-an-email' }, cookie, '198.51.100.50')).toMatchObject({
       status: 400,
       error: { fields: { email: expect.any(String) } },

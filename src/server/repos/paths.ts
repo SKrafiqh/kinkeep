@@ -23,5 +23,7 @@ export const groups = { doses: 'doseEvents', appointments: 'appointments', medic
 
 /** The circle a document path belongs to. */
 export function circleIdOf(path: string): string {
-  return path.split('/')[1];
+  const [, circleId] = path.split('/');
+  if (!circleId) throw new Error(`Not a path inside a circle: "${path}".`);
+  return circleId;
 }

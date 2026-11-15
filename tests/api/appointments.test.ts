@@ -6,6 +6,7 @@ import { GET as lookupRoute } from '@/app/api/circles/lookup/route';
 import { POST as addMemberRoute } from '@/app/api/members/route';
 import { POST as passcodeRoute } from '@/app/api/passcode/route';
 import { POST as signInRoute } from '@/app/api/session/route';
+import { first } from '@/lib/arrays';
 import { HOUR_MS, MINUTE_MS } from '@/lib/constants';
 import { paths } from '@/server/repos/paths';
 import { call, createCircle, createWorld, type World } from './helpers';
@@ -31,7 +32,7 @@ beforeEach(async () => {
   const created = await createCircle();
   cookie = created.cookie;
   code = created.code;
-  circleId = (await world.deps.store.list<{ id: string }>('circles'))[0].id;
+  circleId = first(await world.deps.store.list<{ id: string }>('circles')).id;
 });
 
 const add = (body: unknown = APPOINTMENT, as: string = cookie) => call(addAppointmentRoute, { cookie: as, body });

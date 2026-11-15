@@ -1,6 +1,7 @@
 import { can } from '@/domain/permissions';
 import { formatDay, formatTime } from '@/domain/time';
 import type { Circle, DoseAction, DoseEvent, Member } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { AppError } from '@/lib/errors';
 import { readActionToken, type ActionClaims } from '../auth/actionToken';
 import type { Deps } from '../deps';
@@ -43,10 +44,11 @@ export interface ActionPreview {
 export async function previewAction(deps: Deps, token: string): Promise<ActionPreview> {
   const { claims, circle, doses } = await verify(deps, token);
   const used = await deps.store.get(paths.usedToken(claims.jti));
+  const { dueAt } = first(doses);
   return {
     elderName: circle.elderName,
-    day: formatDay(doses[0].dueAt, circle.timeZone),
-    slotTime: formatTime(doses[0].dueAt, circle.timeZone),
+    day: formatDay(dueAt, circle.timeZone),
+    slotTime: formatTime(dueAt, circle.timeZone),
     medicines: doses.map((dose) => ({ name: dose.medName, strength: dose.strength })),
     settled: used !== null || doses.every((dose) => dose.status === 'taken' || dose.status === 'skipped'),
   };
@@ -61,13 +63,14 @@ export async function performAction(deps: Deps, token: string, action: DoseActio
     expireAt: new Date(claims.exp * 1000),
   });
   if (!firstUse) throw new AppError('CONFLICT', 'This link was already used. Open the app to see today’s doses.');
-  const settled = await actOnSlot(deps, claims.circleId, doses[0].slotKey, { action, memberId: claims.memberId }).catch(
-    async (error: unknown) => {
-      // The dose was not marked, so give the link back rather than leave the person stuck.
-      await deps.store.delete(paths.usedToken(claims.jti));
-      throw error;
-    },
-  );
+  const settled = await actOnSlot(deps, claims.circleId, first(doses).slotKey, {
+    action,
+    memberId: claims.memberId,
+  }).catch(async (error: unknown) => {
+    // The dose was not marked, so give the link back rather than leave the person stuck.
+    await deps.store.delete(paths.usedToken(claims.jti));
+    throw error;
+  });
   if (settled.length === 0) throw new AppError('CONFLICT', 'These medicines were already marked. Nothing was changed.');
   return { count: settled.length };
 }

@@ -19,6 +19,14 @@ export interface TickResult {
   complete: boolean;
 }
 
+interface StepOutcome {
+  count: number;
+  complete: boolean;
+}
+
+/** Materialise, doses, appointments and summaries, in run order. */
+type TickSteps = [StepOutcome, StepOutcome, StepOutcome, StepOutcome];
+
 // Each circle is read at most once per tick, however many of its doses are due.
 function circleLoader(deps: Deps): (circleId: string) => Promise<CircleContext | null> {
   const cache = new Map<string, Promise<CircleContext | null>>();
@@ -59,7 +67,7 @@ export async function runTick(deps: Deps): Promise<TickResult> {
   };
 
   const horizon = now + (MATERIALISE_HOURS - MATERIALISE_REFILL_HOURS) * HOUR_MS;
-  const steps = [
+  const steps: TickSteps = [
     await eachDue(
       'materialise',
       await medicationsToTopUp(deps.store, horizon, TICK_PAGE_SIZE),
@@ -88,13 +96,13 @@ export async function runTick(deps: Deps): Promise<TickResult> {
 }
 
 /** Folds the four stage outcomes, in run order, into the tick's result. */
-function toTickResult(steps: Array<{ count: number; complete: boolean }>): TickResult {
-  const [materialised, doseEmails, appointmentEmails, summaryEmails] = steps.map((step) => step.count);
+function toTickResult(steps: TickSteps): TickResult {
+  const [materialised, doseEmails, appointmentEmails, summaryEmails] = steps;
   return {
-    materialised,
-    doseEmails,
-    appointmentEmails,
-    summaryEmails,
+    materialised: materialised.count,
+    doseEmails: doseEmails.count,
+    appointmentEmails: appointmentEmails.count,
+    summaryEmails: summaryEmails.count,
     complete: steps.every((step) => step.complete),
   };
 }
@@ -105,7 +113,7 @@ async function eachDue<T>(
   items: T[],
   outOfTime: () => boolean,
   work: (item: T) => Promise<number>,
-): Promise<{ count: number; complete: boolean }> {
+): Promise<StepOutcome> {
   let count = 0;
   for (const item of items) {
     if (outOfTime()) return { count, complete: false };

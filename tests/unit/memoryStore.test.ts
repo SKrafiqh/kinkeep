@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { first } from '@/lib/arrays';
 import { createMemoryStore } from '@/server/repos/memoryStore';
 
 describe('the memory store', () => {
@@ -160,12 +161,12 @@ describe('the memory store', () => {
     const original = { n: 1, nested: { list: [1] } };
     await s.set('c/1', original);
     original.nested.list.push(2);
-    const first = await s.get<typeof original>('c/1');
-    expect(first?.nested.list).toEqual([1]);
-    first?.nested.list.push(3);
+    const read = await s.get<typeof original>('c/1');
+    expect(read?.nested.list).toEqual([1]);
+    read?.nested.list.push(3);
     expect((await s.get<typeof original>('c/1'))?.nested.list).toEqual([1]);
-    (await s.list<typeof original>('c'))[0].nested.list.push(4);
-    (await s.listGroup<typeof original>('c', {}))[0].data.nested.list.push(5);
+    first(await s.list<typeof original>('c')).nested.list.push(4);
+    first(await s.listGroup<typeof original>('c', {})).data.nested.list.push(5);
     expect((await s.get<typeof original>('c/1'))?.nested.list).toEqual([1]);
   });
 });

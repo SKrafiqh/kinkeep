@@ -7,6 +7,7 @@ import { doseView, type DoseView } from '@/domain/escalation';
 import { can } from '@/domain/permissions';
 import { formatDate, formatTime, zonedParts } from '@/domain/time';
 import type { DoseEvent } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { getDeps } from '@/server/deps';
 import { requireMember } from '@/server/page';
 import { listDay } from '@/server/services/doses';
@@ -36,7 +37,7 @@ function toSlots(doses: DoseEvent[], now: number, timeZone: string): Slot[] {
     const missed = views.find((dose) => dose.view === 'missed');
     return {
       key,
-      time: formatTime(group[0].dueAt, timeZone),
+      time: formatTime(first(group).dueAt, timeZone),
       doses: views,
       actionId: (open ?? missed)?.id ?? null,
       missed: !open && Boolean(missed),

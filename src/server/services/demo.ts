@@ -1,6 +1,7 @@
 import { buildDoseEvent } from '@/domain/schedule';
 import { addDays, localDate, localTime, zonedToInstant } from '@/domain/time';
 import type { Activity, Appointment, Circle, DoseEvent, DoseStatus, Medication, Member } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { DAY_MS, DEMO_GLOBAL_CAP, MINUTE_MS } from '@/lib/constants';
 import { AppError } from '@/lib/errors';
 import { randomPasscode } from '../auth/passcode';
@@ -167,7 +168,7 @@ function buildActivity(circle: Circle, people: DemoPeople, medicines: Medication
     actorName: actor.name,
     ...item,
   });
-  const [metformin] = medicines;
+  const metformin = first(medicines);
   const arjunAddedAt = now - 6 * DAY_MS;
   const aboutArjun = { targetType: 'member', targetId: people.grandson.id } as const;
   return [

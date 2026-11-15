@@ -15,7 +15,7 @@ export function Roles() {
           const Icon = ROLE_ICONS[index];
           return (
             <li key={role.name} className="grid content-start gap-3 p-7 sm:p-9">
-              <Icon aria-hidden weight="duotone" size={36} className="text-primary" />
+              {Icon ? <Icon aria-hidden weight="duotone" size={36} className="text-primary" /> : null}
               <h3 className="text-[1.35rem] font-medium tracking-[-0.02em]">{role.name}</h3>
               <p className="font-semibold text-primary-dark">{role.lead}</p>
               <ul className="grid list-disc gap-1 pl-6 text-muted">

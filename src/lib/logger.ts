@@ -17,8 +17,8 @@ export const log = {
 
 /** "priya@example.com" becomes "p***@example.com". */
 export function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  return `${local.slice(0, 1)}***@${domain ?? ''}`;
+  const [local = '', domain = ''] = email.split('@');
+  return `${local.slice(0, 1)}***@${domain}`;
 }
 
 /** Name and message of a thrown value, for logs only. */

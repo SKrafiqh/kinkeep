@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { POST as tickRoute } from '@/app/api/cron/tick/route';
 import { POST as doseActRoute } from '@/app/api/doses/[id]/act/route';
 import { POST as addMedRoute } from '@/app/api/medications/route';
+import { first } from '@/lib/arrays';
 import { MINUTE_MS } from '@/lib/constants';
 import { addHelper, ALL_ON, at, cookie, setUpEngine, tick, today, world } from './engineWorld';
 import { call, MEDICINE_INPUT } from './helpers';
@@ -37,8 +38,8 @@ describe('dose reminders', () => {
     await tick();
     expect(world.emails).toHaveLength(1);
     expect(world.emails[0]).toMatchObject({ to: 'rao@example.com', subject: 'Your 9:00 am medicines (2)' });
-    expect(world.emails[0].text).toContain('Metformin 500 mg');
-    expect(world.emails[0].text).toContain('Amlodipine 5 mg');
+    expect(first(world.emails).text).toContain('Metformin 500 mg');
+    expect(first(world.emails).text).toContain('Amlodipine 5 mg');
   });
 
   it('never sends the same stage twice when the tick repeats', async () => {
@@ -63,7 +64,7 @@ describe('dose reminders', () => {
     at(30);
     await tick();
     expect(world.emails.map((e) => e.to)).toEqual(['rao@example.com', 'rao@example.com']);
-    expect(world.emails[1].subject).toBe('Reminder: your 9:00 am medicines are waiting');
+    expect(world.emails[1]).toMatchObject({ subject: 'Reminder: your 9:00 am medicines are waiting' });
     at(60);
     await tick();
     expect(world.emails).toHaveLength(3);
@@ -71,7 +72,7 @@ describe('dose reminders', () => {
       to: 'priya@example.com',
       subject: 'Mr Rao has not confirmed the 9:00 am medicines',
     });
-    expect((await today())[0].status).toBe('missed');
+    expect(first(await today()).status).toBe('missed');
   });
 
   it('marks the dose missed but emails nobody when every alert is off', async () => {
@@ -79,7 +80,7 @@ describe('dose reminders', () => {
     at(60);
     await tick();
     expect(world.emails).toHaveLength(0);
-    expect((await today())[0].status).toBe('missed');
+    expect(first(await today()).status).toBe('missed');
   });
 
   it('goes straight to missed when the engine was down, without a stale reminder', async () => {
@@ -92,7 +93,7 @@ describe('dose reminders', () => {
   it('stops as soon as the dose is confirmed', async () => {
     at(-15);
     await tick();
-    const [dose] = await today();
+    const dose = first(await today());
     await call(doseActRoute, { cookie, params: { id: dose.id }, body: { action: 'taken' } });
     at(30);
     await tick();
@@ -105,7 +106,7 @@ describe('dose reminders', () => {
   it('records a dose taken after it was missed as taken late', async () => {
     at(60);
     await tick();
-    const [dose] = await today();
+    const dose = first(await today());
     const result = await call(doseActRoute, { cookie, params: { id: dose.id }, body: { action: 'taken' } });
     expect(result.data.doses[0]).toMatchObject({ status: 'taken', late: true });
     expect((await call(doseActRoute, { cookie, params: { id: dose.id }, body: { action: 'skipped' } })).status).toBe(
@@ -138,7 +139,7 @@ describe('failed sends', () => {
     await tick();
     await tick();
     expect(world.emails).toHaveLength(1);
-    expect((await today())[0].status).toBe('reminded');
+    expect(first(await today()).status).toBe('reminded');
   });
 
   it('gives up after three attempts instead of looping', async () => {
@@ -147,7 +148,7 @@ describe('failed sends', () => {
       at(minute);
       await tick();
     }
-    const [dose] = await today();
+    const dose = first(await today());
     expect(dose).toMatchObject({ status: 'reminded', attempts: 3 });
     // A short code is stored, never the mail server's own words, which can hold an address.
     expect(dose.lastError).toBe('Error');

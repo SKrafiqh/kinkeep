@@ -7,6 +7,7 @@ import { PATCH as patchMedRoute } from '@/app/api/medications/[id]/route';
 import { POST as addMedRoute } from '@/app/api/medications/route';
 import { POST as testReminderRoute } from '@/app/api/test-reminder/route';
 import type { Circle, DoseEvent } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { DEMO_GLOBAL_CAP, MAX_MEDICINES, MINUTE_MS, TEST_EMAIL_CIRCLE_CAP } from '@/lib/constants';
 import { allowRequest, resetRateLimits } from '@/server/auth/rateLimit';
 import { circleDashboard } from '@/server/services/dashboard';
@@ -61,7 +62,7 @@ describe('daily caps kept in the database', () => {
 
 describe('size limits', () => {
   it('refuses more than the maximum number of medicines', async () => {
-    const [circle] = await world.deps.store.list<Circle>('circles');
+    const circle = first(await world.deps.store.list<Circle>('circles'));
     for (let i = 0; i < MAX_MEDICINES; i += 1) {
       await world.deps.store.set(`circles/${circle.id}/medications/m${i}`, { id: `m${i}`, name: `Med ${i}` });
     }
@@ -147,7 +148,7 @@ describe('reminder engine resilience', () => {
   it('stops reminding about a dose already due when its medicine is paused', async () => {
     world.time.now = DUE - 15 * MINUTE_MS;
     await tick();
-    const [dose] = await today();
+    const dose = first(await today());
     world.time.now = DUE + 10 * MINUTE_MS;
     await call(patchMedRoute, {
       method: 'PATCH',
@@ -167,7 +168,7 @@ describe('reminder engine resilience', () => {
 
 describe('circle dashboard', () => {
   it('reports empty adherence, no next visit, and the change feed', async () => {
-    const [circle] = await world.deps.store.list<Circle>('circles');
+    const circle = first(await world.deps.store.list<Circle>('circles'));
     const dashboard = await circleDashboard(world.deps, circle);
     expect(dashboard).toMatchObject({
       week: { percent: null },
@@ -176,6 +177,6 @@ describe('circle dashboard', () => {
       byMedicine: [],
     });
     expect(dashboard.strip).toHaveLength(7);
-    expect(dashboard.activity[0].summary).toBe('Mr Rao created the circle');
+    expect(first(dashboard.activity).summary).toBe('Mr Rao created the circle');
   });
 });

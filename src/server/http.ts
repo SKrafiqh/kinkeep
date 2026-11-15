@@ -79,6 +79,14 @@ function assertSameOrigin(request: Request, config: Config): void {
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+const NOT_FOUND = 'We could not find that.';
+
+/** A path parameter of the route, such as `id`. A missing one is a 404, like a malformed one. */
+export function requireParam(params: Params, name: string): string {
+  const value = params[name];
+  if (value === undefined) throw new AppError('NOT_FOUND', NOT_FOUND);
+  return value;
+}
 
 // One bucket per route and caller. Ids in the path are replaced, so every appointment's
 // brief shares one bucket and a caller cannot mint fresh buckets by varying the id.
@@ -109,8 +117,7 @@ function createRoute<Body>(
       if (!options.skipOriginCheck) assertSameOrigin(request, deps.config);
       // Next.js passes no params object at all to a route without dynamic segments.
       const params = (await context.params) ?? {};
-      if (Object.values(params).some((value) => !ID_PATTERN.test(value)))
-        throw new AppError('NOT_FOUND', 'We could not find that.');
+      if (Object.values(params).some((value) => !ID_PATTERN.test(value))) throw new AppError('NOT_FOUND', NOT_FOUND);
       if (options.rateLimit && !allowRequest(limitKey(request, params), options.rateLimit, now)) {
         throw new AppError('RATE_LIMITED', 'That was a lot of tries. Please wait a minute and try again.');
       }

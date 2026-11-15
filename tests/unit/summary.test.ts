@@ -36,13 +36,13 @@ describe('weeklySummarySentences', () => {
   });
 
   it('names the dose missed most often', () => {
-    const patterns = [{ medName: 'Atorvastatin', time: '20:00', missed: 2, total: 7 }];
-    expect(weeklySummarySentences('Mr Rao', { taken: 19, total: 21, percent: 90 }, patterns)).toEqual([
+    const pattern = { medName: 'Atorvastatin', time: '20:00', missed: 2, total: 7 };
+    expect(weeklySummarySentences('Mr Rao', { taken: 19, total: 21, percent: 90 }, [pattern])).toEqual([
       'Mr Rao took 19 of 21 doses this week (90%).',
       'The dose missed most often was Atorvastatin at 8:00 pm, missed 2 times.',
     ]);
     expect(
-      weeklySummarySentences('Mr Rao', { taken: 20, total: 21, percent: 95 }, [{ ...patterns[0], missed: 1 }])[1],
+      weeklySummarySentences('Mr Rao', { taken: 20, total: 21, percent: 95 }, [{ ...pattern, missed: 1 }])[1],
     ).toBe('The dose missed most often was Atorvastatin at 8:00 pm, missed once.');
   });
 });

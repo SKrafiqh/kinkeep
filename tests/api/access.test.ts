@@ -7,6 +7,7 @@ import { DELETE as removeMemberRoute, PATCH as patchMemberRoute } from '@/app/ap
 import { GET as listMembersRoute, POST as addMemberRoute } from '@/app/api/members/route';
 import { POST as passcodeRoute } from '@/app/api/passcode/route';
 import { POST as signInRoute } from '@/app/api/session/route';
+import { first } from '@/lib/arrays';
 import { issueSession } from '@/server/auth/session';
 import { call, CIRCLE_INPUT, createCircle, createWorld, MEDICINE_INPUT, signIn, type World } from './helpers';
 
@@ -39,7 +40,7 @@ describe('creating a circle', () => {
 
   it('never stores the passcode itself', async () => {
     const { code } = await createCircle();
-    const [circle] = await world.deps.store.list<{ id: string }>('circles');
+    const circle = first(await world.deps.store.list<{ id: string }>('circles'));
     const members = await world.deps.store.list<Record<string, unknown>>(`circles/${circle.id}/members`);
     expect(JSON.stringify(members)).not.toContain(CIRCLE_INPUT.passcode);
     expect(code).toBeTruthy();

@@ -20,7 +20,7 @@ const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;'
 
 /** Makes user-entered text safe to place in HTML. */
 export function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ESCAPES[character]);
+  return value.replace(/[&<>"']/g, (character) => ESCAPES[character] ?? character);
 }
 
 const FOOTER = `You are getting this because you are part of a ${APP_NAME} care circle.`;

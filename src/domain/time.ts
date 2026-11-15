@@ -37,6 +37,22 @@ function formatterFor(timeZone: string): Intl.DateTimeFormat {
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
+type Numbers<Count extends 2 | 3> = Count extends 2 ? [number, number] : [number, number, number];
+
+function hasCount<Count extends 2 | 3>(values: number[], count: Count): values is Numbers<Count> {
+  return values.length === count;
+}
+
+// Dates and times are validated before they reach this file, so a malformed one is a bug.
+function splitNumbers<Count extends 2 | 3>(text: string, separator: '-' | ':', count: Count): Numbers<Count> {
+  const parts = text.split(separator);
+  const values = parts.map(Number);
+  if (!parts.every((part) => /^\d+$/.test(part)) || !hasCount(values, count)) {
+    throw new Error(`Malformed date or time: "${text}".`);
+  }
+  return values;
+}
+
 /** True when `timeZone` is an IANA zone this runtime knows. */
 export function isValidTimeZone(timeZone: string): boolean {
   try {
@@ -75,8 +91,8 @@ function offsetMs(instant: number, timeZone: string): number {
  * to the hour before it; a repeated time maps to its first occurrence.
  */
 export function zonedToInstant(date: string, time: string, timeZone: string): number {
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
+  const [year, month, day] = splitNumbers(date, '-', 3);
+  const [hour, minute] = splitNumbers(time, ':', 2);
   const wall = Date.UTC(year, month - 1, day, hour, minute);
   // The zone's offset a day either side covers both sides of any clock change.
   const candidates = [wall - offsetMs(wall - DAY_MS, timeZone), wall - offsetMs(wall + DAY_MS, timeZone)];
@@ -100,19 +116,19 @@ export function localTime(instant: number, timeZone: string): string {
 
 /** Calendar date `days` after `date`. */
 export function addDays(date: string, days: number): string {
-  const [year, month, day] = date.split('-').map(Number);
+  const [year, month, day] = splitNumbers(date, '-', 3);
   return new Date(Date.UTC(year, month - 1, day) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
 /** Day of the week of a calendar date, 0 = Sunday. */
 export function weekdayOf(date: string): number {
-  const [year, month, day] = date.split('-').map(Number);
+  const [year, month, day] = splitNumbers(date, '-', 3);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
 /** "08:00" becomes "8:00 am". */
 export function formatClock(time: string): string {
-  const [hour, minute] = time.split(':').map(Number);
+  const [hour, minute] = splitNumbers(time, ':', 2);
   return `${hour % 12 === 0 ? 12 : hour % 12}:${pad(minute)} ${hour < 12 ? 'am' : 'pm'}`;
 }
 
@@ -123,7 +139,7 @@ export function formatTime(instant: number, timeZone: string): string {
 
 /** A calendar date as "Mon 16 Nov". */
 export function formatDate(date: string): string {
-  const [, month, day] = date.split('-').map(Number);
+  const [, month, day] = splitNumbers(date, '-', 3);
   return `${DAY_NAMES[weekdayOf(date)]} ${day} ${MONTHS[month - 1]}`;
 }
 

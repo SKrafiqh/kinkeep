@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { adherenceByMedicine, adherenceOf, dayStrip, inWindow, missedPatterns } from '@/domain/adherence';
 import { zonedToInstant } from '@/domain/time';
 import type { DoseStatus } from '@/domain/types';
+import { first } from '@/lib/arrays';
 
 const KOLKATA = 'Asia/Kolkata';
 
@@ -74,7 +75,7 @@ describe('dayStrip', () => {
 
   it('marks a day with nothing taken as none', () => {
     const now = zonedToInstant('2026-11-14', '23:00', KOLKATA);
-    expect(dayStrip([dose('A', '2026-11-14', '08:00', 'missed')], now, KOLKATA, 1)[0].state).toBe('none');
+    expect(first(dayStrip([dose('A', '2026-11-14', '08:00', 'missed')], now, KOLKATA, 1)).state).toBe('none');
   });
 });
 

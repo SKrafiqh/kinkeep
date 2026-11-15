@@ -1,6 +1,7 @@
 import { advanceDose } from '@/domain/escalation';
 import { formatTime } from '@/domain/time';
 import type { Circle, DoseEvent, DoseStatus } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { MAX_SEND_ATTEMPTS, MINUTE_MS, SEND_RETRY_MINUTES } from '@/lib/constants';
 import { errorFields, log } from '@/lib/logger';
 import { issueActionToken } from '../auth/actionToken';
@@ -41,7 +42,8 @@ function messagesFor(
   stage: DoseStatus,
   doses: DoseEvent[],
 ): EmailMessage[] {
-  const slotTime = formatTime(doses[0].dueAt, circle.timeZone);
+  const firstDose = first(doses);
+  const slotTime = formatTime(firstDose.dueAt, circle.timeZone);
   const medicines = doses.map((dose) => ({ name: dose.medName, strength: dose.strength }));
   if (stage === 'missed') {
     const content = missedEmail({
@@ -54,7 +56,7 @@ function messagesFor(
   }
   const recipient = elderRecipient(circle, members);
   if (!recipient) return [];
-  const { slotKey, dueAt } = doses[0];
+  const { slotKey, dueAt } = firstDose;
   const token = issueActionToken(deps.config, { circleId: circle.id, slotKey, memberId: recipient.id, dueAt });
   const input = { whose: whose(recipient, circle), slotTime, medicines, actUrl: `${deps.config.APP_URL}/act/${token}` };
   return [{ to: recipient.email, ...(stage === 'nudged' ? nudgeEmail(input) : upcomingEmail(input)) }];
@@ -83,11 +85,12 @@ function recordFailure(
   const lastError = errorCode(error);
   return deps.store.transaction(async (tx) => {
     const fresh = await Promise.all(claimed.map(({ event }) => tx.get<DoseEvent>(paths.dose(circle.id, event.id))));
-    fresh.forEach((current, index) => {
+    claimed.forEach(({ event, previous }, index) => {
+      const current = fresh[index];
       if (!current) return;
       const attempts = current.attempts + 1;
-      const retry = current.status === claimed[index].event.status && attempts < MAX_SEND_ATTEMPTS;
-      const back = { status: claimed[index].previous, nextActionAt: now + SEND_RETRY_MINUTES * MINUTE_MS };
+      const retry = current.status === event.status && attempts < MAX_SEND_ATTEMPTS;
+      const back = { status: previous, nextActionAt: now + SEND_RETRY_MINUTES * MINUTE_MS };
       tx.update(paths.dose(circle.id, current.id), { attempts, lastError, ...(retry ? back : {}) });
     });
   });

@@ -6,6 +6,7 @@ import { GET as dosesRoute } from '@/app/api/doses/route';
 import { PATCH as patchMedRoute } from '@/app/api/medications/[id]/route';
 import { nextWeeklySummaryAt } from '@/domain/summary';
 import type { Circle, DoseEvent } from '@/domain/types';
+import { first } from '@/lib/arrays';
 import { HOUR_MS } from '@/lib/constants';
 import { previewAction } from '@/server/services/actions';
 import { listDay } from '@/server/services/doses';
@@ -18,7 +19,7 @@ describe('one-tap links', () => {
   async function reminderToken(): Promise<string> {
     at(-15);
     await tick();
-    return tokenIn(world.emails[0].text);
+    return tokenIn(first(world.emails).text);
   }
 
   it('shows the confirm page without changing anything', async () => {
@@ -26,14 +27,14 @@ describe('one-tap links', () => {
     const preview = await previewAction(world.deps, token);
     expect(preview).toMatchObject({ elderName: 'Mr Rao', slotTime: '9:00 am', day: 'Mon 16 Nov', settled: false });
     expect(preview.medicines).toEqual([{ name: 'Metformin', strength: '500 mg' }]);
-    expect((await today())[0].status).toBe('reminded');
+    expect(first(await today()).status).toBe('reminded');
     expect(await world.deps.store.list('usedTokens')).toEqual([]);
   });
 
   it('marks the slot on POST, without a session, exactly once', async () => {
     const token = await reminderToken();
-    const first = await call(actRoute, { body: { token, action: 'taken' } });
-    expect(first).toMatchObject({ status: 200, data: { count: 1 } });
+    const firstTap = await call(actRoute, { body: { token, action: 'taken' } });
+    expect(firstTap).toMatchObject({ status: 200, data: { count: 1 } });
     expect((await today())[0]).toMatchObject({ status: 'taken', actedAt: world.time.now });
     expect((await call(actRoute, { body: { token, action: 'skipped' } })).status).toBe(409);
     expect((await previewAction(world.deps, token)).settled).toBe(true);
@@ -51,8 +52,8 @@ describe('one-tap links', () => {
     await setUpEngine({ name: 'Priya', role: 'caregiver', email: 'priya@example.com' });
     at(-15);
     await tick();
-    const token = tokenIn(world.emails[0].text);
-    const [circle] = await world.deps.store.list<{ id: string; remindersTo: string }>('circles');
+    const token = tokenIn(first(world.emails).text);
+    const circle = first(await world.deps.store.list<{ id: string; remindersTo: string }>('circles'));
     await world.deps.store.update(`circles/${circle.id}/members/${circle.remindersTo}`, { removedAt: world.time.now });
     expect((await call(actRoute, { body: { token, action: 'taken' } })).status).toBe(401);
   });
@@ -67,7 +68,7 @@ describe('schedules', () => {
   });
 
   it('rebuilds only future unconfirmed doses when a medicine is edited', async () => {
-    const [morning] = await today();
+    const morning = first(await today());
     await call(doseActRoute, { cookie, params: { id: morning.id }, body: { action: 'taken' } });
     at(5);
     const edited = await call(patchMedRoute, {
@@ -85,7 +86,7 @@ describe('schedules', () => {
   });
 
   it('removes future doses when a medicine is paused', async () => {
-    const [morning] = await today();
+    const morning = first(await today());
     await call(patchMedRoute, {
       method: 'PATCH',
       cookie,
@@ -97,11 +98,11 @@ describe('schedules', () => {
 
   it('tops up the horizon from the tick, once', async () => {
     world.time.now = START + 20 * HOUR_MS;
-    const first = await tick();
-    expect(first.data.materialised).toBeGreaterThan(0);
+    const firstTick = await tick();
+    expect(firstTick.data.materialised).toBeGreaterThan(0);
     expect((await tick()).data.materialised).toBe(0);
     // The 12-hour session has expired by now, so read the day through the service.
-    const [circle] = await world.deps.store.list<Circle>('circles');
+    const circle = first(await world.deps.store.list<Circle>('circles'));
     expect((await listDay(world.deps, circle, '2026-11-18')).doses.length).toBeGreaterThan(0);
   });
 });
@@ -128,7 +129,7 @@ describe('appointment reminders and the weekly summary', () => {
     await tick();
     const dayBefore = world.emails.filter((e) => e.subject.startsWith('Coming up'));
     expect(dayBefore.map((e) => e.to).sort()).toEqual(['priya@example.com', 'rao@example.com']);
-    expect(dayBefore[0].subject).toBe('Coming up: Dr Meera Iyer, Thu 19 Nov 10:30 am');
+    expect(first(dayBefore).subject).toBe('Coming up: Dr Meera Iyer, Thu 19 Nov 10:30 am');
     world.time.now = visitAt - 2 * HOUR_MS;
     await tick();
     await tick();
@@ -143,6 +144,6 @@ describe('appointment reminders and the weekly summary', () => {
     await tick();
     const summaries = world.emails.filter((e) => e.subject === "Mr Rao's week in medicines");
     expect(summaries.map((e) => e.to).sort()).toEqual(['priya@example.com', 'rao@example.com']);
-    expect(summaries[0].text).toContain('doses this week');
+    expect(first(summaries).text).toContain('doses this week');
   });
 });

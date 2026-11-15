@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { GET as activityRoute } from '@/app/api/activity/route';
 import { DELETE as removeMemberRoute, PATCH as patchMemberRoute } from '@/app/api/members/[id]/route';
 import { GET as listMembersRoute, POST as addMemberRoute } from '@/app/api/members/route';
+import { first } from '@/lib/arrays';
 import { MINUTE_MS } from '@/lib/constants';
 import { call, createCircle, createWorld, type World } from './helpers';
 
@@ -197,7 +198,7 @@ describe('who receives the elder reminders', () => {
     const id = await addPriya();
     await patch(id, { receivesElderReminders: true });
     expect((await remove(id)).data).toEqual({ removed: true });
-    const [circle] = await world.deps.store.list<{ remindersTo: string | null }>('circles');
+    const circle = first(await world.deps.store.list<{ remindersTo: string | null }>('circles'));
     expect(circle.remindersTo).toBeNull();
   });
 });

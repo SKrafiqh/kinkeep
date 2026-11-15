@@ -1,3 +1,4 @@
+import { last } from '@/lib/arrays';
 import { addDays, localDate, localTime } from './time';
 import type { DoseEvent } from './types';
 
@@ -37,7 +38,7 @@ export function adherenceByMedicine(doses: Dose[]): MedicineAdherence[] {
   const groups = new Map<string, Dose[]>();
   for (const dose of doses) groups.set(dose.medId, [...(groups.get(dose.medId) ?? []), dose]);
   return [...groups.entries()]
-    .map(([medId, group]) => ({ medId, medName: group[group.length - 1].medName, stat: adherenceOf(group) }))
+    .map(([medId, group]) => ({ medId, medName: last(group).medName, stat: adherenceOf(group) }))
     .sort((a, b) => a.medName.localeCompare(b.medName));
 }
 
