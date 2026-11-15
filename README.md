@@ -2,7 +2,9 @@
 
 **The care circle the elder runs, not one that is run about them.**
 
-Live app: _added after the Cloud Run deploy_ · CI: `.github/workflows/ci.yml`
+**Live app:** https://kinkeep-692923269273.asia-south1.run.app (choose **Try the demo**)
+
+[![CI](https://github.com/SKrafiqh/kinkeep/actions/workflows/ci.yml/badge.svg)](https://github.com/SKrafiqh/kinkeep/actions/workflows/ci.yml)
 
 ## The problem
 
